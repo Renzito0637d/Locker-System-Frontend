@@ -1,25 +1,49 @@
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
 
-function App() {
+import LayoutAdmin from "./Pages/Admin/LayoutAdmin";
+import Users from "./Pages/Admin/Users";
+import Login from "./Pages/Login";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import Dashboard from "./Pages/Admin/Dashboard";
+import Lockers from "./Pages/Admin/Lockers";
+import Ubicacion from "./Pages/Admin/Ubicacion";
+import Reportes from "./Pages/Admin/Reportes";
+
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+  },
+});
+
+const views = {
+  inicio: <Dashboard />,
+  usuarios: <Users />,
+  lockers: <Lockers />,
+  ubicacion: <Ubicacion />,
+  reportes: <Reportes />,
+};
+
+export default function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <>
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <Router>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            {/* <Route path="/registro" element={<Registro />} /> */}
+            {/* <Route path="/usuariodashboard" element={<Home? />} /> */}
+            <Route path="/admin" element={<LayoutAdmin views={views} />} />
+            {/* Ruta por defecto si no encuentra coincidencias */}
+            <Route path="*" element={
+              <h2>404 - Página no encontrada</h2>
+            }
+            />
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </>
   );
 }
-
-export default App;

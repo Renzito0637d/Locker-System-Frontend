@@ -3,11 +3,11 @@
 ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
 ![Bootstrap](https://img.shields.io/badge/bootstrap-%238511FA.svg?style=for-the-badge&logo=bootstrap&logoColor=white)
 ![MUI](https://img.shields.io/badge/MUI-%230081CB.svg?style=for-the-badge&logo=mui&logoColor=white)
-
-
+![Git](https://img.shields.io/badge/git-%23F05033.svg?style=for-the-badge&logo=git&logoColor=white)
+![Jira](https://img.shields.io/badge/jira-%230A0FFF.svg?style=for-the-badge&logo=jira&logoColor=white)
 ---
 
-App web frontend para un sistema de lockers para la UTP sede norte
+App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
 
 
 # 🚀 Instrucciones para clonar y ejecutar el proyecto React
@@ -19,16 +19,20 @@ Abre tu terminal y ejecuta:
 git clone https://github.com/usuario/nombre-del-proyecto.git
 ```
 Después entra a la carpeta del proyecto:
-
 ```
 cd nombre-del-proyecto
 ```
-
 ### 2. Instalar dependencias
 ```
 npm install
 ```
+### 3. Ejecutar
+Para levantar el servidor local:
+```
+npm start
+```
 
+La app se abrirá en http://localhost:3000
 ## Lista de requerimientos funcionales
 
 | RF   | Descripcion | Estado |
@@ -46,13 +50,3 @@ npm install
 | RF11   | El sistema debe permitir iniciar sesión y autenticarse según el rol del usuario. |:alarm_clock:|
 | RF12   |  Los usuarios deben poder ver los lockers asignados a ellos. |:alarm_clock:|
 | RF13   | Los administradores deben poder administrar los permisos y roles de los usuarios. |:alarm_clock:|
-
-
-
-### 3. Ejecutar
-Para levantar el servidor local:
-```
-npm start
-```
-
-La app se abrirá en http://localhost:3000

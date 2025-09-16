@@ -93,7 +93,62 @@ export default function Lockers() {
             </form>
           </div>
 
-         
+          {/* Tabla */}
+          <div className="table-responsive">
+            <table className="table table-hover align-middle table-dark text-light">
+              <thead className="table-primary">
+                <tr>
+                  <th>ID</th>
+                  <th>Número</th>
+                  <th>Estado</th>
+                  <th className="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lockers.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="text-center">
+                      No hay lockers registrados
+                    </td>
+                  </tr>
+                ) : (
+                  lockers.map((locker) => (
+                    <tr key={locker.id}>
+                      <td>{locker.id}</td>
+                      <td>{locker.numero}</td>
+                      <td>
+                        <span
+                          className={`badge px-3 py-2 ${
+                            locker.estado === "Disponible"
+                              ? "bg-success"
+                              : locker.estado === "Ocupado"
+                              ? "bg-danger"
+                              : "bg-warning text-dark"
+                          }`}
+                        >
+                          {locker.estado}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <button
+                          className="btn btn-sm btn-warning me-2"
+                          onClick={() => handleEdit(locker.id)}
+                        >
+                          <i className="bi bi-pencil"></i>
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDelete(locker.id)}
+                        >
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

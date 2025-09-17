@@ -4,17 +4,26 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 
 export default function Lockers() {
   const [lockers, setLockers] = useState([
-    { id: 1, numero: "A101", estado: "Disponible" },
-    { id: 2, numero: "A102", estado: "Ocupado" },
-    { id: 3, numero: "A103", estado: "Disponible" },
+    { id: 1, numero: "A01", estado: "Disponible" },
+    { id: 2, numero: "B02", estado: "Ocupado" },
+    { id: 3, numero: "A15", estado: "Disponible" },
   ]);
   const [numero, setNumero] = useState("");
   const [estado, setEstado] = useState("Disponible");
   const [editId, setEditId] = useState(null);
 
+  // Extrae pabellón y piso del número (ej: "A15" => "A", 15)
+  const getUbicacion = (numero) => {
+    if (!numero || numero.length < 2) return "";
+    const pabellon = numero[0].toUpperCase();
+    const piso = parseInt(numero.slice(1), 10);
+    if (isNaN(piso)) return `Pabellón ${pabellon}`;
+    return `Pabellón ${pabellon}, Piso ${piso}`;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!numero) return;
+    if (!numero || numero.length < 2) return;
 
     if (editId !== null) {
       setLockers((prev) =>
@@ -69,9 +78,18 @@ export default function Lockers() {
                 <input
                   type="text"
                   className="form-control bg-secondary text-light"
-                  placeholder="Número de Locker"
+                  placeholder="Número de Locker (ej: A01, B15)"
                   value={numero}
-                  onChange={(e) => setNumero(e.target.value)}
+                  maxLength={3}
+                  onChange={(e) => {
+                    // Solo permite formato letra+números, ej: A01, B15
+                    let val = e.target.value.toUpperCase();
+                    val = val.replace(/[^A-B0-9]/g, "");
+                    if (val.length > 0) {
+                      val = val[0].replace(/[^A-B]/, "") + val.slice(1, 3).replace(/[^0-9]/g, "");
+                    }
+                    setNumero(val.slice(0, 3));
+                  }}
                 />
               </div>
               <div className="col-md-5">
@@ -100,6 +118,7 @@ export default function Lockers() {
                 <tr>
                   <th>ID</th>
                   <th>Número</th>
+                  <th>Ubicación</th>
                   <th>Estado</th>
                   <th className="text-center">Acciones</th>
                 </tr>
@@ -107,7 +126,7 @@ export default function Lockers() {
               <tbody>
                 {lockers.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="text-center">
+                    <td colSpan="5" className="text-center">
                       No hay lockers registrados
                     </td>
                   </tr>
@@ -116,6 +135,7 @@ export default function Lockers() {
                     <tr key={locker.id}>
                       <td>{locker.id}</td>
                       <td>{locker.numero}</td>
+                      <td>{getUbicacion(locker.numero)}</td>
                       <td>
                         <span
                           className={`badge px-3 py-2 ${

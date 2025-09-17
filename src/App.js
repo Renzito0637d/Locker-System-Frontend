@@ -13,6 +13,8 @@ import Ubicacion from "./Pages/Admin/Ubicacion";
 import Reportes from "./Pages/Admin/Reportes";
 import LayoutUser from "./Pages/User/LayoutUser";
 import MisLockers from "./Pages/User/MisLockers";
+import ReservarLocker from "./Pages/User/ReservarLocker";
+
 
 const darkTheme = createTheme({
   palette: {
@@ -29,8 +31,9 @@ const views = {
 };
 
 const viewsUser = {
-  mislockers: <MisLockers />
-};
+  mislockers: <MisLockers />,
+  reservas: <ReservarLocker />,
+  };
 
 export default function App() {
   return (

@@ -3,6 +3,7 @@ import React from "react";
 import LayoutAdmin from "./Pages/Admin/LayoutAdmin";
 import Users from "./Pages/Admin/Users";
 import Login from "./Pages/Login";
+import Registro from "./Pages/Registro";
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -33,7 +34,7 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/" element={<Login />} />
-            {/* <Route path="/registro" element={<Registro />} /> */}
+            <Route path="/registro" element={<Registro />} />
             {/* <Route path="/usuariodashboard" element={<Home? />} /> */}
             <Route path="/admin" element={<LayoutAdmin views={views} />} />
             {/* Ruta por defecto si no encuentra coincidencias */}

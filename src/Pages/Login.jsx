@@ -8,7 +8,7 @@ export default function Login() {
     const handleSubmit = (e) => {
         e.preventDefault();
         // Aquí va la validación
-        navigate("/admin"); // Redirige al panel admin después de login
+        navigate("/usuario"); // Redirige al panel admin después de login
     };
 
     return (

@@ -32,7 +32,7 @@ export default function App() {
         <CssBaseline />
         <Router>
           <Routes>
-            <Route path="/" element={<Users />} />
+            <Route path="/" element={<Login />} />
             {/* <Route path="/registro" element={<Registro />} /> */}
             {/* <Route path="/usuariodashboard" element={<Home? />} /> */}
             <Route path="/admin" element={<LayoutAdmin views={views} />} />

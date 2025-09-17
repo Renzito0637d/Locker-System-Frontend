@@ -11,6 +11,8 @@ import Dashboard from "./Pages/Admin/Dashboard";
 import Lockers from "./Pages/Admin/Lockers";
 import Ubicacion from "./Pages/Admin/Ubicacion";
 import Reportes from "./Pages/Admin/Reportes";
+import LayoutUser from "./Pages/User/LayoutUser";
+import MisLockers from "./Pages/User/MisLockers";
 
 const darkTheme = createTheme({
   palette: {
@@ -26,6 +28,10 @@ const views = {
   reportes: <Reportes />,
 };
 
+const viewsUser = {
+  mislockers: <MisLockers />
+};
+
 export default function App() {
   return (
     <>
@@ -35,7 +41,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
-            {/* <Route path="/usuariodashboard" element={<Home? />} /> */}
+            <Route path="/usuario" element={<LayoutUser viewsUser={viewsUser}/>} />
             <Route path="/admin" element={<LayoutAdmin views={views} />} />
             {/* Ruta por defecto si no encuentra coincidencias */}
             <Route path="*" element={

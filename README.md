@@ -16,11 +16,11 @@ App web frontend para un sistema de lockers para la UTP sede norte que permita a
 Abre tu terminal y ejecuta:
 
 ```
-git clone https://github.com/usuario/nombre-del-proyecto.git
+git clone https://github.com/Renzito0637d/Locker-System-Frontend.git
 ```
 Después entra a la carpeta del proyecto:
 ```
-cd nombre-del-proyecto
+cd Locker-System-Frontend
 ```
 ### 2. Instalar dependencias
 ```

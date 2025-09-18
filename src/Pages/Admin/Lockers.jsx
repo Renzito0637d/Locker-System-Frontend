@@ -1,13 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
 export default function Lockers() {
-  const [lockers, setLockers] = useState([
-    { id: 1, numero: "A01", estado: "Disponible" },
-    { id: 2, numero: "B02", estado: "Ocupado" },
-    { id: 3, numero: "A15", estado: "Disponible" },
-  ]);
+  // Cargar datos desde localStorage al iniciar
+  const [lockers, setLockers] = useState(() => {
+    const saved = localStorage.getItem("lockers");
+    return saved
+      ? JSON.parse(saved)
+      : [
+          { id: 1, numero: "A01", estado: "Disponible" },
+          { id: 2, numero: "B02", estado: "Ocupado" },
+          { id: 3, numero: "A15", estado: "Disponible" },
+        ];
+  });
+
+  // Guardar en localStorage cada vez que cambie lockers
+  useEffect(() => {
+    localStorage.setItem("lockers", JSON.stringify(lockers));
+  }, [lockers]);
+
   const [numero, setNumero] = useState("");
   const [estado, setEstado] = useState("Disponible");
   const [editId, setEditId] = useState(null);
@@ -22,28 +34,30 @@ export default function Lockers() {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!numero || numero.length < 2) return;
+  e.preventDefault();
+  if (!numero || numero.length < 2) return;
 
-    if (editId !== null) {
-      setLockers((prev) =>
-        prev.map((l) =>
-          l.id === editId ? { ...l, numero, estado } : l
-        )
-      );
-      setEditId(null);
-    } else {
-      const newLocker = {
-        id: Date.now(),
-        numero,
-        estado,
-      };
-      setLockers((prev) => [...prev, newLocker]);
-    }
+  if (editId !== null) {
+    setLockers((prev) =>
+      prev.map((l) =>
+        l.id === editId ? { ...l, numero, estado } : l
+      )
+    );
+    setEditId(null);
+  } else {
+    // Calcula el siguiente ID correlativo
+    const nextId = lockers.length > 0 ? Math.max(...lockers.map(l => l.id)) + 1 : 1;
+    const newLocker = {
+      id: nextId,
+      numero,
+      estado,
+    };
+    setLockers((prev) => [...prev, newLocker]);
+  }
 
-    setNumero("");
-    setEstado("Disponible");
-  };
+  setNumero("");
+  setEstado("Disponible");
+};
 
   const handleEdit = (id) => {
     const locker = lockers.find((l) => l.id === id);

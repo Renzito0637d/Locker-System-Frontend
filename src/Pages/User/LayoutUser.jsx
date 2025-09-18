@@ -125,7 +125,7 @@ export default function LayoutUser({ viewsUser }) {
   const menuItems = [
     { key: "mislockers", label: "Mis Lockers", icon: <Inventory2RoundedIcon /> },
     { key: "reservas", label: "Reservar locker", icon: <EventAvailable /> },
-    { key: "reportar", label: "Reportar locker", icon: <ReportProblemRoundedIcon /> },
+    { key: "misreportes", label: "Reportar locker", icon: <ReportProblemRoundedIcon /> },
   ];
 
   const navigate = useNavigate();
@@ -267,4 +267,5 @@ export default function LayoutUser({ viewsUser }) {
       </Box>
     </Box>
   );
+
 }

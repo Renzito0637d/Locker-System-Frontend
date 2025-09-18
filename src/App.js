@@ -7,9 +7,11 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Dashboard from "./Pages/Admin/Dashboard";
+import LayoutUser from "./Pages/User/LayoutUser";
 import Lockers from "./Pages/Admin/Lockers";
 import Ubicacion from "./Pages/Admin/Ubicacion";
 import Reportes from "./Pages/Admin/Reportes";
+import ReportarIncidencia from "./Pages/User/ReportarIncidencia";
 
 const darkTheme = createTheme({
   palette: {
@@ -25,6 +27,10 @@ const views = {
   reportes: <Reportes />,
 };
 
+const viewsUser = {
+  misreportes: <ReportarIncidencia />,
+  };
+
 export default function App() {
   return (
     <>
@@ -33,8 +39,7 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/" element={<Login />} />
-            {/* <Route path="/registro" element={<Registro />} /> */}
-            {/* <Route path="/usuariodashboard" element={<Home? />} /> */}
+            <Route path="/usuario" element={<LayoutUser viewsUser={viewsUser}/>} />
             <Route path="/admin" element={<LayoutAdmin views={views} />} />
             {/* Ruta por defecto si no encuentra coincidencias */}
             <Route path="*" element={

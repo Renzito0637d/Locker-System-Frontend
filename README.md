@@ -12,7 +12,7 @@ App web frontend para un sistema de lockers para la UTP sede norte que permita a
 
 ---
 
-App web frontend para un sistema de lockers para la UTP sede norte
+App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
 
 
 # 🚀 Instrucciones para clonar y ejecutar el proyecto React
@@ -31,7 +31,6 @@ cd nombre-del-proyecto
 ```
 cd nombre-del-proyecto
 ```
-
 ### 2. Instalar dependencias
 ```
 npm install
@@ -44,6 +43,7 @@ npm start
 
 La app se abrirá en http://localhost:3000
 
+La app se abrirá en http://localhost:3000
 ## Lista de requerimientos funcionales
 
 | RF   | Descripcion | Estado |
@@ -61,13 +61,3 @@ La app se abrirá en http://localhost:3000
 | RF11   | El sistema debe permitir iniciar sesión y autenticarse según el rol del usuario. |:alarm_clock:|
 | RF12   |  Los usuarios deben poder ver los lockers asignados a ellos. |:alarm_clock:|
 | RF13   | Los administradores deben poder administrar los permisos y roles de los usuarios. |:alarm_clock:|
-
-
-
-### 3. Ejecutar
-Para levantar el servidor local:
-```
-npm start
-```
-
-La app se abrirá en http://localhost:3000

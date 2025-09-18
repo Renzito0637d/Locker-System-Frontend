@@ -40,8 +40,8 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/" element={<Login />} />
-            {/* <Route path="/registro" element={<Registro />} /> */}
-            {/* <Route path="/usuariodashboard" element={<Home? />} /> */}
+            <Route path="/registro" element={<Registro />} />
+            <Route path="/usuario" element={<LayoutUser viewsUser={viewsUser}/>} />
             <Route path="/admin" element={<LayoutAdmin views={views} />} />
             {/* Ruta por defecto si no encuentra coincidencias */}
             <Route path="*" element={

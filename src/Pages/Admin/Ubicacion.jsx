@@ -1,50 +1,84 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
 export default function Ubicacion() {
-  const [ubicaciones, setUbicaciones] = useState([
-    { id: 1, nombre: "Edificio A", descripcion: "Primer piso, pasillo central", pabellon: "A", piso: 1 },
-    { id: 2, nombre: "Edificio B", descripcion: "Segundo piso, junto a la cafetería", pabellon: "B", piso: 2 },
-    { id: 3, nombre: "Gimnasio", descripcion: "Entrada principal", pabellon: "A", piso: 1 },
-  ]);
+  const [ubicaciones, setUbicaciones] = useState(() => {
+  const dataGuardada = localStorage.getItem("ubicaciones");
+  return dataGuardada
+    ? JSON.parse(dataGuardada)
+    : [
+        {
+          id: 1,
+          nombre: "Edificio A",
+          descripcion: "Primer piso, pasillo central",
+          pabellon: "A",
+          piso: 1,
+        },
+        {
+          id: 2,
+          nombre: "Edificio B",
+          descripcion: "Segundo piso, junto a la cafetería",
+          pabellon: "B",
+          piso: 2,
+        },
+        {
+          id: 3,
+          nombre: "Gimnasio",
+          descripcion: "Entrada principal",
+          pabellon: "A",
+          piso: 1,
+        },
+      ];
+});
+
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [pabellon, setPabellon] = useState("A");
   const [piso, setPiso] = useState(1);
   const [editId, setEditId] = useState(null);
 
+ 
+  // 🟢 Guardar en localStorage cada vez que cambien las ubicaciones
+  useEffect(() => {
+    localStorage.setItem("ubicaciones", JSON.stringify(ubicaciones));
+     console.log("Guardado en localStorage:", ubicaciones);
+  }, [ubicaciones]);
+
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!nombre || !descripcion || !pabellon || !piso) return;
+  e.preventDefault();
+  if (!nombre || !descripcion || !pabellon || !piso) return;
 
-    if (editId !== null) {
-      setUbicaciones((prev) =>
-        prev.map((u) =>
-          u.id === editId ? { ...u, nombre, descripcion, pabellon, piso } : u
-        )
-      );
-      setEditId(null);
-    } else {
-      const nuevaUbicacion = {
-        id: Date.now(),
-        nombre,
-        descripcion,
-        pabellon,
-        piso,
-      };
-      setUbicaciones((prev) => [...prev, nuevaUbicacion]);
-    }
+  if (editId !== null) {
+    setUbicaciones((prev) =>
+      prev.map((u) =>
+        u.id === editId ? { ...u, nombre, descripcion, pabellon, piso } : u
+      )
+    );
+    setEditId(null);
+  } else {
+    // Calcula el siguiente ID correlativo
+    const nextId = ubicaciones.length > 0 ? Math.max(...ubicaciones.map(u => u.id)) + 1 : 1;
+    const nuevaUbicacion = {
+      id: nextId,
+      nombre,
+      descripcion,
+      pabellon,
+      piso,
+    };
+    setUbicaciones((prev) => [...prev, nuevaUbicacion]);
+  }
 
-    setNombre("");
-    setDescripcion("");
-    setPabellon("A");
-    setPiso(1);
-  };
+  setNombre("");
+  setDescripcion("");
+  setPabellon("A");
+  setPiso(1);
+};
 
   const handleEdit = (id) => {
     const ubicacion = ubicaciones.find((u) => u.id === id);
     if (!ubicacion) return;
+
     setEditId(ubicacion.id);
     setNombre(ubicacion.nombre);
     setDescripcion(ubicacion.descripcion);
@@ -73,7 +107,9 @@ export default function Ubicacion() {
 
           {/* Formulario */}
           <div className="border rounded-3 p-3 mb-4 bg-dark">
-            <h5 className="mb-3">{editId ? "Editar Ubicación" : "Agregar Ubicación"}</h5>
+            <h5 className="mb-3">
+              {editId ? "Editar Ubicación" : "Agregar Ubicación"}
+            </h5>
             <form className="row g-3" onSubmit={handleSubmit}>
               <div className="col-md-3">
                 <input
@@ -152,7 +188,13 @@ export default function Ubicacion() {
                       <td>{ubicacion.nombre}</td>
                       <td>{ubicacion.descripcion}</td>
                       <td>
-                        <span className={`badge ${ubicacion.pabellon === "A" ? "bg-info" : "bg-warning text-dark"}`}>
+                        <span
+                          className={`badge ${
+                            ubicacion.pabellon === "A"
+                              ? "bg-info"
+                              : "bg-warning text-dark"
+                          }`}
+                        >
                           {ubicacion.pabellon}
                         </span>
                       </td>
@@ -179,6 +221,7 @@ export default function Ubicacion() {
               </tbody>
             </table>
           </div>
+
         </div>
       </div>
     </div>

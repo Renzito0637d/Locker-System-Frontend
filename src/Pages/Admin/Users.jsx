@@ -1,13 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
 export default function Users() {
-  const [users, setUsers] = useState([
-    { id: 1, nombre: "Juan", apellido: "Zarate", correo: "juan@correo.com", rol: "Admin" },
-    { id: 2, nombre: "María", apellido: "Vargas", correo: "maria@correo.com", rol: "Usuario" },
-    { id: 3, nombre: "Carlos", apellido: "Repudio", correo: "carlos@correo.com", rol: "Usuario" },
-  ]);
+  // Cargar usuarios desde localStorage al iniciar
+  const [users, setUsers] = useState(() => {
+    const saved = localStorage.getItem("users");
+    return saved
+      ? JSON.parse(saved)
+      : [
+          { id: 1, nombre: "Juan", apellido: "Zarate", correo: "juan@correo.com", rol: "Admin" },
+          { id: 2, nombre: "María", apellido: "Vargas", correo: "maria@correo.com", rol: "Usuario" },
+          { id: 3, nombre: "Carlos", apellido: "Repudio", correo: "carlos@correo.com", rol: "Usuario" },
+        ];
+  });
+
+  // Guardar en localStorage cuando cambie users
+  useEffect(() => {
+    localStorage.setItem("users", JSON.stringify(users));
+  }, [users]);
 
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
@@ -15,34 +26,35 @@ export default function Users() {
   const [rol, setRol] = useState("Usuario");
   const [editId, setEditId] = useState(null);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!nombre || !apellido || !correo) return;
+const handleSubmit = (e) => {
+  e.preventDefault();
+  if (!nombre || !apellido || !correo) return;
 
-    if (editId !== null) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editId ? { ...u, nombre, apellido, correo, rol } : u
-        )
-      );
-      setEditId(null);
-    } else {
-      const newUser = {
-        id: Date.now(),
-        nombre,
-        apellido,
-        correo,
-        rol,
-      };
-      setUsers((prev) => [...prev, newUser]);
-    }
+  if (editId !== null) {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === editId ? { ...u, nombre, apellido, correo, rol } : u
+      )
+    );
+    setEditId(null);
+  } else {
+    // Calcula el siguiente ID correlativo
+    const nextId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
+    const newUser = {
+      id: nextId,
+      nombre,
+      apellido,
+      correo,
+      rol,
+    };
+    setUsers((prev) => [...prev, newUser]);
+  }
 
-    setNombre("");
-    setApellido("");
-    setCorreo("");
-    setRol("Usuario");
-  };
-
+  setNombre("");
+  setApellido("");
+  setCorreo("");
+  setRol("Usuario");
+};
   const handleEdit = (id) => {
     const user = users.find((u) => u.id === id);
     if (!user) return;

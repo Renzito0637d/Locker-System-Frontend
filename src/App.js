@@ -8,11 +8,14 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Dashboard from "./Pages/Admin/Dashboard";
+import LayoutUser from "./Pages/User/LayoutUser";
 import Lockers from "./Pages/Admin/Lockers";
 import Ubicacion from "./Pages/Admin/Ubicacion";
 import Reportes from "./Pages/Admin/Reportes";
-import LayoutUser from "./Pages/User/LayoutUser";
+import ReportarIncidencia from "./Pages/User/ReportarIncidencia";
 import MisLockers from "./Pages/User/MisLockers";
+import ReservarLocker from "./Pages/User/ReservarLocker";
+import UbicacionesLockers from "./Pages/User/UbicacionesLockers";
 
 const darkTheme = createTheme({
   palette: {
@@ -29,8 +32,11 @@ const views = {
 };
 
 const viewsUser = {
-  mislockers: <MisLockers />
-};
+  misreportes: <ReportarIncidencia />,
+  mislockers: <MisLockers />,
+  reservas: <ReservarLocker />,
+  ubicaciones: <UbicacionesLockers />
+  };
 
 export default function App() {
   return (

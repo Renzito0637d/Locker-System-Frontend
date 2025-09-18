@@ -17,7 +17,7 @@ import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 
 import { motion } from "framer-motion";
 
-// Datos de ejemplo
+// Datos iniciales (estáticos para pruebas/demo)
 const reportesIniciales = [
   {
     id: 1,
@@ -46,10 +46,41 @@ const reportesIniciales = [
     fecha: "2025-09-04",
     hora: "18:47",
   },
+  {
+    id: 4,
+    locker: "D-07",
+    usuario: "María López",
+    descripcion: "No abre con la tarjeta",
+    estado: "pendiente",
+    fecha: "2025-09-06",
+    hora: "20:15",
+  },
+  {
+    id: 5,
+    locker: "E-15",
+    usuario: "Luis Fernández",
+    descripcion: "La cerradura se siente floja",
+    estado: "en revisión",
+    fecha: "2025-09-07",
+    hora: "11:22",
+  },
 ];
 
 export default function ReportsView() {
-  const [reportes, setReportes] = React.useState(reportesIniciales);
+  const [reportes, setReportes] = React.useState(() => {
+    // Leer los guardados si existen
+    const guardados = localStorage.getItem("reportes");
+    if (guardados) {
+      return JSON.parse(guardados);
+    }
+    // Si no hay nada, mostrar los iniciales (demo)
+    return reportesIniciales;
+  });
+
+  // Guardar cambios en localStorage
+  React.useEffect(() => {
+    localStorage.setItem("reportes", JSON.stringify(reportes));
+  }, [reportes]);
 
   const handleChangeEstado = (id, nuevoEstado) => {
     setReportes((prev) =>

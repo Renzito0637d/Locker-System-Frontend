@@ -20,6 +20,7 @@ import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
 import { Avatar, Button } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import { useNavigate } from "react-router-dom";
 import { EventAvailable } from "@mui/icons-material";
 
@@ -125,7 +126,8 @@ export default function LayoutUser({ viewsUser }) {
   const menuItems = [
     { key: "mislockers", label: "Mis Lockers", icon: <Inventory2RoundedIcon /> },
     { key: "reservas", label: "Reservar locker", icon: <EventAvailable /> },
-    { key: "reportar", label: "Reportar locker", icon: <ReportProblemRoundedIcon /> },
+    { key: "misreportes", label: "Reportar locker", icon: <ReportProblemRoundedIcon /> },
+    { key: "ubicaciones", label: "Ubicaciones de lockers", icon: <PlaceRoundedIcon /> }
   ];
 
   const navigate = useNavigate();
@@ -150,7 +152,7 @@ export default function LayoutUser({ viewsUser }) {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div">
-            Panel de administrador — {menuItems.find(m => m.key === currentView)?.label}
+            Panel de Usuario — {menuItems.find(m => m.key === currentView)?.label}
           </Typography>
         </Toolbar>
       </AppBar>
@@ -267,4 +269,5 @@ export default function LayoutUser({ viewsUser }) {
       </Box>
     </Box>
   );
+
 }

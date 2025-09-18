@@ -20,6 +20,7 @@ import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
 import { Avatar, Button } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import { useNavigate } from "react-router-dom";
 import { EventAvailable } from "@mui/icons-material";
 
@@ -126,6 +127,7 @@ export default function LayoutUser({ viewsUser }) {
     { key: "mislockers", label: "Mis Lockers", icon: <Inventory2RoundedIcon /> },
     { key: "reservas", label: "Reservar locker", icon: <EventAvailable /> },
     { key: "misreportes", label: "Reportar locker", icon: <ReportProblemRoundedIcon /> },
+    { key: "ubicaciones", label: "Ubicaciones de lockers", icon: <PlaceRoundedIcon /> }
   ];
 
   const navigate = useNavigate();

@@ -15,6 +15,7 @@ import Reportes from "./Pages/Admin/Reportes";
 import ReportarIncidencia from "./Pages/User/ReportarIncidencia";
 import MisLockers from "./Pages/User/MisLockers";
 import ReservarLocker from "./Pages/User/ReservarLocker";
+import UbicacionesLockers from "./Pages/User/UbicacionesLockers";
 
 const darkTheme = createTheme({
   palette: {
@@ -34,6 +35,7 @@ const viewsUser = {
   misreportes: <ReportarIncidencia />,
   mislockers: <MisLockers />,
   reservas: <ReservarLocker />,
+  ubicaciones: <UbicacionesLockers />
   };
 
 export default function App() {

@@ -152,7 +152,7 @@ export default function LayoutUser({ viewsUser }) {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div">
-            Panel de administrador — {menuItems.find(m => m.key === currentView)?.label}
+            Panel de Usuario — {menuItems.find(m => m.key === currentView)?.label}
           </Typography>
         </Toolbar>
       </AppBar>

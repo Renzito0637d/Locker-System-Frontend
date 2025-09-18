@@ -267,4 +267,5 @@ export default function LayoutUser({ viewsUser }) {
       </Box>
     </Box>
   );
+
 }

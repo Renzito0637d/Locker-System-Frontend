@@ -7,7 +7,8 @@
 ![Jira](https://img.shields.io/badge/jira-%230A0FFF.svg?style=for-the-badge&logo=jira&logoColor=white)
 ---
 
-App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
+App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera lockersssssssss
+sjsjsjsj segura, ordenada y eficiente.
 App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
 App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
 App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.

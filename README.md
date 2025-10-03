@@ -8,6 +8,10 @@
 ---
 
 App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
+App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
+App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
+App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
+App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
 
 
 # 🚀 Instrucciones para clonar y ejecutar el proyecto React

@@ -21,9 +21,10 @@ import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded';
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
-import { Avatar, Button } from "@mui/material";
+import { Avatar, Button, CircularProgress, Dialog, DialogActions, DialogTitle } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useNavigate } from "react-router-dom";
+import { logout } from "../../lib/auth";
 
 const user = {
   name: "Juan Pérez",
@@ -133,6 +134,22 @@ export default function LayoutAdmin({ views }) {
   ];
 
   const navigate = useNavigate();
+  const [loading, setLoading] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await logout();
+      navigate("/");
+    } catch (err) {
+      console.error("Logout error:", err);
+      navigate("/");
+    } finally {
+      setLoading(false);
+      setConfirmOpen(false);
+    }
+  };
 
   // Render principal
   return (
@@ -241,7 +258,8 @@ export default function LayoutAdmin({ views }) {
                 size="small"
                 fullWidth
                 startIcon={<LogoutRoundedIcon />}
-                onClick={() => navigate("/")}
+                onClick={() => setConfirmOpen(true)}
+                disabled={loading}
               >
                 Cerrar sesión
               </Button>
@@ -249,14 +267,26 @@ export default function LayoutAdmin({ views }) {
               <IconButton
                 color="inherit"
                 size="small"
-                onClick={() => navigate("/")}
+                onClick={() => setConfirmOpen(true)}
                 sx={{ mx: "auto", display: "block" }}
                 aria-label="Cerrar sesión"
+                disabled={loading}
               >
                 <LogoutRoundedIcon />
               </IconButton>
             )}
           </Box>
+
+          {/* Diálogo de confirmación opcional */}
+          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+            <DialogTitle>{"¿Cerrar sesión?"}</DialogTitle>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={() => setConfirmOpen(false)} disabled={loading}>Cancelar</Button>
+              <Button onClick={handleLogout} variant="contained" disabled={loading}>
+                {loading ? <CircularProgress size={18} color="inherit" /> : "Sí, salir"}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       </Drawer>
 

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useNavigate } from "react-router-dom";
 import { styled, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import MuiDrawer from "@mui/material/Drawer";
@@ -18,11 +19,11 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
-import { Avatar, Button } from "@mui/material";
+import { Avatar, Button, CircularProgress, Dialog, DialogActions, DialogTitle } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
-import { useNavigate } from "react-router-dom";
 import { EventAvailable } from "@mui/icons-material";
+import { logout } from "../../lib/auth";
 
 const user = {
   name: "Luis Sánchez",
@@ -109,6 +110,8 @@ const Drawer = styled(MuiDrawer, {
   ],
 }));
 
+
+
 /**
  * Menu del USUARIO para navegar entre componentes
  */
@@ -131,6 +134,22 @@ export default function LayoutUser({ viewsUser }) {
   ];
 
   const navigate = useNavigate();
+  const [loading, setLoading] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await logout();
+      navigate("/");
+    } catch (err) {
+      console.error("Logout error:", err);
+      navigate("/");
+    } finally {
+      setLoading(false);
+      setConfirmOpen(false);
+    }
+  };
 
   // Render principal
   return (
@@ -239,7 +258,8 @@ export default function LayoutUser({ viewsUser }) {
                 size="small"
                 fullWidth
                 startIcon={<LogoutRoundedIcon />}
-                onClick={() => navigate("/")}
+                onClick={() => setConfirmOpen(true)}
+                disabled={loading}
               >
                 Cerrar sesión
               </Button>
@@ -247,14 +267,26 @@ export default function LayoutUser({ viewsUser }) {
               <IconButton
                 color="inherit"
                 size="small"
-                onClick={() => navigate("/")}
+                onClick={() => setConfirmOpen(true)}
                 sx={{ mx: "auto", display: "block" }}
                 aria-label="Cerrar sesión"
+                disabled={loading}
               >
                 <LogoutRoundedIcon />
               </IconButton>
             )}
           </Box>
+
+          {/* Diálogo de confirmación opcional */}
+          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+            <DialogTitle>{"¿Cerrar sesión?"}</DialogTitle>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={() => setConfirmOpen(false)} disabled={loading}>Cancelar</Button>
+              <Button onClick={handleLogout} variant="contained" disabled={loading}>
+                {loading ? <CircularProgress size={18} color="inherit" /> : "Sí, salir"}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       </Drawer>
 

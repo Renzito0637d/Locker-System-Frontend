@@ -16,6 +16,7 @@ import ReportarIncidencia from "./Pages/User/ReportarIncidencia";
 import MisLockers from "./Pages/User/MisLockers";
 import ReservarLocker from "./Pages/User/ReservarLocker";
 import UbicacionesLockers from "./Pages/User/UbicacionesLockers";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const darkTheme = createTheme({
   palette: {
@@ -36,19 +37,28 @@ const viewsUser = {
   mislockers: <MisLockers />,
   reservas: <ReservarLocker />,
   ubicaciones: <UbicacionesLockers />
-  };
+};
 
 export default function App() {
   return (
     <>
       <ThemeProvider theme={darkTheme}>
         <CssBaseline />
+
         <Router>
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
-            <Route path="/usuario" element={<LayoutUser viewsUser={viewsUser}/>} />
-            <Route path="/admin" element={<LayoutAdmin views={views} />} />
+            <Route path="/usuario" element={
+              <ProtectedRoute allowedRoles={["ROLE_ESTUDIANTE"]}>
+                <LayoutUser viewsUser={viewsUser} />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={["ROLE_ADMIN"]}>
+                <LayoutAdmin views={views} />
+              </ProtectedRoute>
+            } />
             {/* Ruta por defecto si no encuentra coincidencias */}
             <Route path="*" element={
               <h2>404 - Página no encontrada</h2>
@@ -56,6 +66,7 @@ export default function App() {
             />
           </Routes>
         </Router>
+
       </ThemeProvider>
     </>
   );

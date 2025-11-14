@@ -37,16 +37,21 @@ La app se abrirá en http://localhost:3000
 
 | RF   | Descripcion | Estado |
 |------|-------------|--------|
-| RF01 | El sistema debe permitir registrar nuevos lockers con datos como ubicación, número o código identificador. |:alarm_clock:|
+| RF01 |El sistema debe permitir registrar nuevos lockers con datos como ubicación, número o código identificador.|:alarm_clock:|
 | RF02 | El sistema debe permitir actualizar la información de un locker (ubicación, estado, etc.) |:alarm_clock:|
 | RF03 | El sistema debe permitir cambiar el estado de un locker a: disponible, ocupado, en mantenimiento. |:alarm_clock:|
 | RF04 |El sistema debe mostrar una lista o tablero con todos los lockers y sus estados actuales. |:alarm_clock:|
 | RF05   |El sistema debe permitir filtrar lockers por estado (disponible, ocupado, mantenimiento). |:alarm_clock:|
-| RF06  |Los usuarios (estudiantes o personal autorizado) deben poder solicitar la asignación de un locker disponible.|:alarm_clock:|
+| RF06  |Los estudiantes deben poder solicitar la asignación de un locker disponible.|:alarm_clock:|
 | RF07 |El sistema debe asignar un locker disponible al usuario y cambiar el estado del locker a “ocupado”. |:alarm_clock:|
 | RF08   |El sistema debe permitir que un usuario libere un locker cuando ya no lo use. |:alarm_clock:|
 | RF09   |El sistema debe actualizar el estado del locker a “disponible” una vez liberado. |:alarm_clock:|
-| RF10   |El sistema debe permitir registrar usuarios con roles (usuario o administrador). |:alarm_clock:|
+| RF10   |El sistema debe permitir al administrador hacer un mantenimiento de los usuarios.|:alarm_clock:|
 | RF11   | El sistema debe permitir iniciar sesión y autenticarse según el rol del usuario. |:alarm_clock:|
-| RF12   |  Los usuarios deben poder ver los lockers asignados a ellos. |:alarm_clock:|
-| RF13   | Los administradores deben poder administrar los permisos y roles de los usuarios. |:alarm_clock:|
+| RF12   |  El sistema debe proteger el acceso a funciones administrativas mediante autenticación y autorización. |:alarm_clock:|
+| RF13   | Los usuarios deben poder ver los lockers asignados a ellos. |:alarm_clock:|
+| RF14   | Los administradores deben poder administrar los permisos y roles de los usuarios.  |:alarm_clock:|
+| RF15   |  Los usuarios deben poder reportar problemas o fallas en un locker. |:alarm_clock:|
+| RF16   | El sistema debe mostrar el historial de mantenimiento de cada locker.  |:alarm_clock:|
+| RF17   | El sistema debe permitir generar reportes de uso de lockers por usuario, por fecha o por ubicación. |:alarm_clock:|
+| RF18   | Los administradores deben poder actualizar el estado de la orden de mantenimiento (pendiente, en proceso, resuelto) del reporte. |:alarm_clock:|

@@ -1,229 +1,150 @@
-import React, { useState, useEffect } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
+import { useEffect, useState } from "react";
+import {
+    Box,
+    Button,
+    TextField,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+} from "@mui/material";
 
 export default function Ubicacion() {
-  const [ubicaciones, setUbicaciones] = useState(() => {
-  const dataGuardada = localStorage.getItem("ubicaciones");
-  return dataGuardada
-    ? JSON.parse(dataGuardada)
-    : [
-        {
-          id: 1,
-          nombre: "Edificio A",
-          descripcion: "Primer piso, pasillo central",
-          pabellon: "A",
-          piso: 1,
-        },
-        {
-          id: 2,
-          nombre: "Edificio B",
-          descripcion: "Segundo piso, junto a la cafetería",
-          pabellon: "B",
-          piso: 2,
-        },
-        {
-          id: 3,
-          nombre: "Gimnasio",
-          descripcion: "Entrada principal",
-          pabellon: "A",
-          piso: 1,
-        },
-      ];
-});
+    const [ubicaciones, setUbicaciones] = useState(() => {
+        const dataGuardada = localStorage.getItem("ubicaciones");
+        return dataGuardada
+            ? JSON.parse(dataGuardada)
+            : [
+                  {
+                      id: 1,
+                      nombre: "Edificio A",
+                      descripcion: "Primer piso, pasillo central",
+                      pabellon: "A",
+                      piso: 1,
+                  },
+                  {
+                      id: 2,
+                      nombre: "Edificio B",
+                      descripcion: "Segundo piso, junto a la cafetería",
+                      pabellon: "B",
+                      piso: 2,
+                  },
+                  {
+                      id: 3,
+                      nombre: "Gimnasio",
+                      descripcion: "Entrada principal",
+                      pabellon: "A",
+                      piso: 1,
+                  },
+              ];
+    });
 
-  const [nombre, setNombre] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [pabellon, setPabellon] = useState("A");
-  const [piso, setPiso] = useState(1);
-  const [editId, setEditId] = useState(null);
+    const [newPlace, setNewPlace] = useState({
+        nombre: "",
+        descripcion: "",
+        pabellon: "",
+        piso: "",
+    });
 
- 
-  // 🟢 Guardar en localStorage cada vez que cambien las ubicaciones
-  useEffect(() => {
-    localStorage.setItem("ubicaciones", JSON.stringify(ubicaciones));
-     console.log("Guardado en localStorage:", ubicaciones);
-  }, [ubicaciones]);
+    useEffect(() => {
+        localStorage.setItem("ubicaciones", JSON.stringify(ubicaciones));
+    }, [ubicaciones]);
 
-  const handleSubmit = (e) => {
-  e.preventDefault();
-  if (!nombre || !descripcion || !pabellon || !piso) return;
+    const handleAddPlace = () => {
+        if (!newPlace.nombre || !newPlace.descripcion) return;
 
-  if (editId !== null) {
-    setUbicaciones((prev) =>
-      prev.map((u) =>
-        u.id === editId ? { ...u, nombre, descripcion, pabellon, piso } : u
-      )
-    );
-    setEditId(null);
-  } else {
-    // Calcula el siguiente ID correlativo
-    const nextId = ubicaciones.length > 0 ? Math.max(...ubicaciones.map(u => u.id)) + 1 : 1;
-    const nuevaUbicacion = {
-      id: nextId,
-      nombre,
-      descripcion,
-      pabellon,
-      piso,
+        const nextId =
+            ubicaciones.length > 0
+                ? Math.max(...ubicaciones.map((u) => u.id)) + 1
+                : 1;
+
+        setUbicaciones([
+            ...ubicaciones,
+            {
+                id: nextId,
+                ...newPlace,
+            },
+        ]);
+
+        setNewPlace({ nombre: "", descripcion: "", pabellon: "", piso: "" });
     };
-    setUbicaciones((prev) => [...prev, nuevaUbicacion]);
-  }
 
-  setNombre("");
-  setDescripcion("");
-  setPabellon("A");
-  setPiso(1);
-};
+    return (
+        <Box p={3} sx={{ backgroundColor: "#121212", minHeight: "100vh" }}>
+            {/* ------------------- FORMULARIO ------------------- */}
+            <Box display="flex" flexDirection="column" gap={2} mb={3} sx={{ width: "100%" }}>
+                <Box display="flex" gap={2} flexWrap="wrap" sx={{ width: "100%" }}>
+                    <TextField
+                        label="Nombre"
+                        value={newPlace.nombre}
+                        onChange={(e) => setNewPlace({ ...newPlace, nombre: e.target.value })}
+                        sx={{ minWidth: 300, flex: 1 }}
+                    />
 
-  const handleEdit = (id) => {
-    const ubicacion = ubicaciones.find((u) => u.id === id);
-    if (!ubicacion) return;
+                    <TextField
+                        label="Pabellón"
+                        value={newPlace.pabellon}
+                        onChange={(e) => setNewPlace({ ...newPlace, pabellon: e.target.value })}
+                        sx={{ minWidth: 250, flex: 1 }}
+                    />
 
-    setEditId(ubicacion.id);
-    setNombre(ubicacion.nombre);
-    setDescripcion(ubicacion.descripcion);
-    setPabellon(ubicacion.pabellon);
-    setPiso(ubicacion.piso);
-  };
+                    <TextField
+                        label="Piso"
+                        value={newPlace.piso}
+                        onChange={(e) => setNewPlace({ ...newPlace, piso: e.target.value })}
+                        sx={{ minWidth: 200, flex: 1 }}
+                    />
+                </Box>
 
-  const handleDelete = (id) => {
-    setUbicaciones((prev) => prev.filter((u) => u.id !== id));
-    if (editId === id) {
-      setEditId(null);
-      setNombre("");
-      setDescripcion("");
-      setPabellon("A");
-      setPiso(1);
-    }
-  };
-
-  return (
-    <div className="container mt-5">
-      <div className="card shadow-lg border-0 rounded-4 bg-dark text-light">
-        <div className="card-body p-4">
-          <h2 className="text-center mb-4 text-primary">
-            <i className="bi bi-geo-alt-fill me-2"></i> Gestión de Ubicaciones de Lockers
-          </h2>
-
-          {/* Formulario */}
-          <div className="border rounded-3 p-3 mb-4 bg-dark">
-            <h5 className="mb-3">
-              {editId ? "Editar Ubicación" : "Agregar Ubicación"}
-            </h5>
-            <form className="row g-3" onSubmit={handleSubmit}>
-              <div className="col-md-3">
-                <input
-                  type="text"
-                  className="form-control bg-secondary text-light"
-                  placeholder="Nombre de la ubicación"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
+                <TextField
+                    label="Descripción"
+                    multiline
+                    rows={4}
+                    value={newPlace.descripcion}
+                    onChange={(e) => setNewPlace({ ...newPlace, descripcion: e.target.value })}
+                    sx={{ width: "100%" }}
                 />
-              </div>
-              <div className="col-md-3">
-                <input
-                  type="text"
-                  className="form-control bg-secondary text-light"
-                  placeholder="Descripción"
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                />
-              </div>
-              <div className="col-md-2">
-                <select
-                  className="form-control bg-secondary text-light"
-                  value={pabellon}
-                  onChange={(e) => setPabellon(e.target.value)}
-                >
-                  <option value="A">Pabellón A</option>
-                  <option value="B">Pabellón B</option>
-                </select>
-              </div>
-              <div className="col-md-2">
-                <select
-                  className="form-control bg-secondary text-light"
-                  value={piso}
-                  onChange={(e) => setPiso(Number(e.target.value))}
-                >
-                  {[...Array(15)].map((_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      Piso {i + 1}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-md-2 d-grid">
-                <button type="submit" className="btn btn-success">
-                  <i className={`bi ${editId ? "bi-pencil-square" : "bi-plus-lg"} me-1`}></i>
-                  {editId ? "Guardar" : "Agregar"}
-                </button>
-              </div>
-            </form>
-          </div>
 
-          {/* Tabla */}
-          <div className="table-responsive">
-            <table className="table table-hover align-middle table-dark text-light">
-              <thead className="table-primary">
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre</th>
-                  <th>Descripción</th>
-                  <th>Pabellón</th>
-                  <th>Piso</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ubicaciones.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center">
-                      No hay ubicaciones registradas
-                    </td>
-                  </tr>
-                ) : (
-                  ubicaciones.map((ubicacion) => (
-                    <tr key={ubicacion.id}>
-                      <td>{ubicacion.id}</td>
-                      <td>{ubicacion.nombre}</td>
-                      <td>{ubicacion.descripcion}</td>
-                      <td>
-                        <span
-                          className={`badge ${
-                            ubicacion.pabellon === "A"
-                              ? "bg-info"
-                              : "bg-warning text-dark"
-                          }`}
-                        >
-                          {ubicacion.pabellon}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="badge bg-secondary">{ubicacion.piso}</span>
-                      </td>
-                      <td className="text-center">
-                        <button
-                          className="btn btn-sm btn-warning me-2"
-                          onClick={() => handleEdit(ubicacion.id)}
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleDelete(ubicacion.id)}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                <Box display="flex" justifyContent="flex-end">
+                    <Button
+                        variant="contained"
+                        onClick={handleAddPlace}
+                        sx={{
+                            textTransform: "none",
+                            boxShadow: "none",
+                            borderRadius: 0,
+                            px: 4,
+                        }}
+                    >
+                        Agregar
+                    </Button>
+                </Box>
+            </Box>
 
-        </div>
-      </div>
-    </div>
-  );
+            {/* ------------------- TABLA ------------------- */}
+            <Table>
+                <TableHead>
+                    <TableRow>
+                        <TableCell sx={{ color: "white" }}>ID</TableCell>
+                        <TableCell sx={{ color: "white" }}>Nombre</TableCell>
+                        <TableCell sx={{ color: "white" }}>Pabellón</TableCell>
+                        <TableCell sx={{ color: "white" }}>Piso</TableCell>
+                        <TableCell sx={{ color: "white" }}>Descripción</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {ubicaciones.map((u) => (
+                        <TableRow key={u.id}>
+                            <TableCell sx={{ color: "white" }}>{u.id}</TableCell>
+                            <TableCell sx={{ color: "white" }}>{u.nombre}</TableCell>
+                            <TableCell sx={{ color: "white" }}>{u.pabellon}</TableCell>
+                            <TableCell sx={{ color: "white" }}>{u.piso}</TableCell>
+                            <TableCell sx={{ color: "white" }}>{u.descripcion}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </Box>
+    );
 }

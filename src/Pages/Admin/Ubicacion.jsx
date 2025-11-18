@@ -8,7 +8,10 @@ import {
     TableCell,
     TableHead,
     TableRow,
+    IconButton,
 } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 export default function Ubicacion() {
     const [ubicaciones, setUbicaciones] = useState(() => {
@@ -47,6 +50,8 @@ export default function Ubicacion() {
         piso: "",
     });
 
+    const [editId, setEditId] = useState(null);
+
     useEffect(() => {
         localStorage.setItem("ubicaciones", JSON.stringify(ubicaciones));
     }, [ubicaciones]);
@@ -54,20 +59,50 @@ export default function Ubicacion() {
     const handleAddPlace = () => {
         if (!newPlace.nombre || !newPlace.descripcion) return;
 
-        const nextId =
-            ubicaciones.length > 0
-                ? Math.max(...ubicaciones.map((u) => u.id)) + 1
-                : 1;
-
-        setUbicaciones([
-            ...ubicaciones,
-            {
-                id: nextId,
-                ...newPlace,
-            },
-        ]);
+        if (editId !== null) {
+            // EDITAR
+            setUbicaciones((prev) =>
+                prev.map((u) =>
+                    u.id === editId ? { ...u, ...newPlace } : u
+                )
+            );
+            setEditId(null);
+        } else {
+            // AGREGAR
+            const nextId =
+                ubicaciones.length > 0
+                    ? Math.max(...ubicaciones.map((u) => u.id)) + 1
+                    : 1;
+            setUbicaciones([
+                ...ubicaciones,
+                {
+                    id: nextId,
+                    ...newPlace,
+                },
+            ]);
+        }
 
         setNewPlace({ nombre: "", descripcion: "", pabellon: "", piso: "" });
+    };
+
+    const handleEdit = (id) => {
+        const lugar = ubicaciones.find((u) => u.id === id);
+        if (!lugar) return;
+        setEditId(id);
+        setNewPlace({
+            nombre: lugar.nombre,
+            descripcion: lugar.descripcion,
+            pabellon: lugar.pabellon,
+            piso: lugar.piso,
+        });
+    };
+
+    const handleDelete = (id) => {
+        setUbicaciones((prev) => prev.filter((u) => u.id !== id));
+        if (editId === id) {
+            setEditId(null);
+            setNewPlace({ nombre: "", descripcion: "", pabellon: "", piso: "" });
+        }
     };
 
     return (
@@ -79,21 +114,24 @@ export default function Ubicacion() {
                         label="Nombre"
                         value={newPlace.nombre}
                         onChange={(e) => setNewPlace({ ...newPlace, nombre: e.target.value })}
-                        sx={{ minWidth: 300, flex: 1 }}
+                        sx={{ minWidth: 300, flex: 1}}
+                        
                     />
 
                     <TextField
                         label="Pabellón"
                         value={newPlace.pabellon}
                         onChange={(e) => setNewPlace({ ...newPlace, pabellon: e.target.value })}
-                        sx={{ minWidth: 250, flex: 1 }}
+                        sx={{ minWidth: 250, flex: 1}}
+                        
                     />
 
                     <TextField
                         label="Piso"
                         value={newPlace.piso}
                         onChange={(e) => setNewPlace({ ...newPlace, piso: e.target.value })}
-                        sx={{ minWidth: 200, flex: 1 }}
+                        sx={{ minWidth: 200, flex: 1}}
+                        
                     />
                 </Box>
 
@@ -103,7 +141,8 @@ export default function Ubicacion() {
                     rows={4}
                     value={newPlace.descripcion}
                     onChange={(e) => setNewPlace({ ...newPlace, descripcion: e.target.value })}
-                    sx={{ width: "100%" }}
+                    sx={{ width: "100%"}}
+                    
                 />
 
                 <Box display="flex" justifyContent="flex-end">
@@ -117,20 +156,21 @@ export default function Ubicacion() {
                             px: 4,
                         }}
                     >
-                        Agregar
+                        {editId ? "Guardar" : "Agregar"}
                     </Button>
                 </Box>
             </Box>
 
             {/* ------------------- TABLA ------------------- */}
-            <Table>
+            <Table sx={{ backgroundColor: "#1a1a1a" }}>
                 <TableHead>
-                    <TableRow>
+                    <TableRow sx={{ backgroundColor: "#1a1a1a" }}>
                         <TableCell sx={{ color: "white" }}>ID</TableCell>
                         <TableCell sx={{ color: "white" }}>Nombre</TableCell>
                         <TableCell sx={{ color: "white" }}>Pabellón</TableCell>
                         <TableCell sx={{ color: "white" }}>Piso</TableCell>
                         <TableCell sx={{ color: "white" }}>Descripción</TableCell>
+                        <TableCell sx={{ color: "white" }} align="center">Acciones</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -141,6 +181,14 @@ export default function Ubicacion() {
                             <TableCell sx={{ color: "white" }}>{u.pabellon}</TableCell>
                             <TableCell sx={{ color: "white" }}>{u.piso}</TableCell>
                             <TableCell sx={{ color: "white" }}>{u.descripcion}</TableCell>
+                            <TableCell align="center">
+                                <IconButton color="warning" onClick={() => handleEdit(u.id)}>
+                                    <EditIcon />
+                                </IconButton>
+                                <IconButton color="error" onClick={() => handleDelete(u.id)}>
+                                    <DeleteIcon />
+                                </IconButton>
+                            </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

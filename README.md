@@ -37,8 +37,8 @@ La app se abrirá en http://localhost:3000
 
 | RF   | Descripcion | Estado |
 |------|-------------|--------|
-| RF01 |El sistema debe permitir registrar nuevos lockers con datos como ubicación, número o código identificador.|:alarm_clock:|
-| RF02 | El sistema debe permitir actualizar la información de un locker (ubicación, estado, etc.) |:alarm_clock:|
+| RF01 |El sistema debe permitir hacer un mantenimiento de lockers con datos como ubicación, número o código identificador.|:alarm_clock:|
+| RF02 | El sistema debe permitir hacer un mantenimiento de ubicacion.|:alarm_clock:|
 | RF03 | El sistema debe permitir cambiar el estado de un locker a: disponible, ocupado, en mantenimiento. |:alarm_clock:|
 | RF04 |El sistema debe mostrar una lista o tablero con todos los lockers y sus estados actuales. |:alarm_clock:|
 | RF05   |El sistema debe permitir filtrar lockers por estado (disponible, ocupado, mantenimiento). |:alarm_clock:|

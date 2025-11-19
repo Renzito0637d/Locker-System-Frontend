@@ -29,6 +29,8 @@ export default function Lockers() {
   const [estado, setEstado] = useState("disponible");
   const [ubicaciones, setUbicaciones] = useState([]);
   const [ubicacionId, setUbicacionId] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+
   const [editId, setEditId] = useState(null);
 
   // 1. Cargar desde backend
@@ -107,6 +109,10 @@ export default function Lockers() {
     await fetch(`${API}/${id}`, { method: "DELETE" });
     setLockers((prev) => prev.filter((l) => l.id !== id));
   };
+  const lockersFiltrados = lockers.filter((l) => {
+    if (filtroEstado === "todos") return true;
+    return l.estado.toLowerCase() === filtroEstado.toLowerCase();
+  });
 
   return (
     <Box sx={{ p: 4, backgroundColor: "#121212", minHeight: "100vh" }}>
@@ -118,61 +124,80 @@ export default function Lockers() {
 
           {/* FORM */}
           <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{ display: "flex", gap: 2, mb: 4 }}
-          >
-            <TextField
-              label="Número"
-              value={numero}
-              onChange={(e) => setNumero(e.target.value.toUpperCase())}
-              variant="filled"
-              sx={{ backgroundColor: "#2a2a2a", input: { color: "white" } }}
-            />
+  component="form"
+  onSubmit={handleSubmit}
+  sx={{ display: "flex", gap: 2, mb: 4 }}
+>
+  <TextField
+    label="Número"
+    value={numero}
+    onChange={(e) => setNumero(e.target.value.toUpperCase())}
+    variant="filled"
+    sx={{ backgroundColor: "#2a2a2a", input: { color: "white" } }}
+  />
 
-            <FormControl
-              variant="filled"
-              sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
-            >
-              <InputLabel sx={{ color: "#aaa" }}>Estado</InputLabel>
-              <Select
-                value={estado}
-                onChange={(e) => setEstado(e.target.value)}
-                sx={{ color: "white" }}
-              >
-                <MenuItem value="disponible">Disponible</MenuItem>
-                <MenuItem value="ocupado">Ocupado</MenuItem>
-                <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl
-              variant="filled"
-              sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
-            >
-              <InputLabel sx={{ color: "#aaa" }}>Ubicación</InputLabel>
-              <Select
-                value={ubicacionId}
-                onChange={(e) => setUbicacionId(e.target.value)}
-                sx={{ color: "white" }}
-              >
-                {ubicaciones.map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.pabellon} - {u.piso}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+  <FormControl
+    variant="filled"
+    sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+  >
+    <InputLabel sx={{ color: "#aaa" }}>Estado</InputLabel>
+    <Select
+      value={estado}
+      onChange={(e) => setEstado(e.target.value)}
+      sx={{ color: "white" }}
+    >
+      <MenuItem value="disponible">Disponible</MenuItem>
+      <MenuItem value="ocupado">Ocupado</MenuItem>
+      <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
+    </Select>
+  </FormControl>
+  
+  <FormControl
+    variant="filled"
+    sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+  >
+    <InputLabel sx={{ color: "#aaa" }}>Ubicación</InputLabel>
+    <Select
+      value={ubicacionId}
+      onChange={(e) => setUbicacionId(e.target.value)}
+      sx={{ color: "white" }}
+    >
+      {ubicaciones.map((u) => (
+        <MenuItem key={u.id} value={u.id}>
+          {u.pabellon} - {u.piso}
+        </MenuItem>
+      ))}
+    </Select>
+  </FormControl>
 
-            <Button type="submit" variant="contained">
-              {editId ? "Actualizar" : "Agregar"}
-            </Button>
-          </Box>
+  {/* FILTRO ESTADO movido antes del botón */}
+  <FormControl
+    variant="filled"
+    sx={{ minWidth: 200, backgroundColor: "#2a2a2a" }}
+  >
+    <InputLabel sx={{ color: "#aaa" }}>Filtrar por estado</InputLabel>
+    <Select
+      value={filtroEstado}
+      onChange={(e) => setFiltroEstado(e.target.value)}
+      sx={{ color: "white" }}
+    >
+      <MenuItem value="todos">Todos</MenuItem>
+      <MenuItem value="disponible">Disponible</MenuItem>
+      <MenuItem value="ocupado">Ocupado</MenuItem>
+      <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
+    </Select>
+  </FormControl>
+
+  <Button type="submit" variant="contained">
+    {editId ? "Actualizar" : "Agregar"}
+  </Button>
+</Box>
+
 
           {/* TABLA */}
           <Table>
             <TableHead>
               <TableRow>
-                
                 <TableCell sx={{ color: "white" }}>Número</TableCell>
                 <TableCell sx={{ color: "white" }}>Estado</TableCell>
                 <TableCell sx={{ color: "white" }}>Ubicación</TableCell>
@@ -183,9 +208,8 @@ export default function Lockers() {
             </TableHead>
 
             <TableBody>
-              {lockers.map((locker) => (
+              {lockersFiltrados.map((locker) => (
                 <TableRow key={locker.id}>
-                  
                   <TableCell sx={{ color: "white" }}>
                     {locker.numeroLocker}
                   </TableCell>

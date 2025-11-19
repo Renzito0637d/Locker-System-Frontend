@@ -45,9 +45,10 @@ export default function Login() {
                 <Box display="flex" justifyContent="center">
                     <Box
                         component="img"
-                        src="https://sercodesac.com/wp-content/uploads/2024/10/Logo-UTP-300x300.png"   // pon la ruta de tu logo (carpeta public en React)
+                        src="https://visualizate.utpxpedition.com/sites/default/files/2020-02/logo-visualizate.png"   // pon la ruta de tu logo (carpeta public en React)
                         alt="Logo"
-                        sx={{ height: 160 }}
+                        sx={{ height: 60 }}
+                        marginBottom={2}
                     />
                 </Box>
 

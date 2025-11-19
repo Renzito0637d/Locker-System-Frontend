@@ -1,9 +1,27 @@
 import React, { useState, useEffect } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  IconButton,
+  FormControl,
+  InputLabel,
+  Chip,
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 export default function Lockers() {
-  // Cargar datos desde localStorage al iniciar
   const [lockers, setLockers] = useState(() => {
     const saved = localStorage.getItem("lockers");
     return saved
@@ -15,7 +33,6 @@ export default function Lockers() {
         ];
   });
 
-  // Guardar en localStorage cada vez que cambie lockers
   useEffect(() => {
     localStorage.setItem("lockers", JSON.stringify(lockers));
   }, [lockers]);
@@ -24,7 +41,6 @@ export default function Lockers() {
   const [estado, setEstado] = useState("Disponible");
   const [editId, setEditId] = useState(null);
 
-  // Extrae pabellón y piso del número (ej: "A15" => "A", 15)
   const getUbicacion = (numero) => {
     if (!numero || numero.length < 2) return "";
     const pabellon = numero[0].toUpperCase();
@@ -37,23 +53,16 @@ export default function Lockers() {
   e.preventDefault();
   if (!numero || numero.length < 2) return;
 
-  if (editId !== null) {
-    setLockers((prev) =>
-      prev.map((l) =>
-        l.id === editId ? { ...l, numero, estado } : l
-      )
-    );
-    setEditId(null);
-  } else {
-    // Calcula el siguiente ID correlativo
-    const nextId = lockers.length > 0 ? Math.max(...lockers.map(l => l.id)) + 1 : 1;
-    const newLocker = {
-      id: nextId,
-      numero,
-      estado,
-    };
-    setLockers((prev) => [...prev, newLocker]);
-  }
+    if (editId !== null) {
+      setLockers((prev) =>
+        prev.map((l) => (l.id === editId ? { ...l, numero, estado } : l))
+      );
+      setEditId(null);
+    } else {
+      const nextId = lockers.length > 0 ? Math.max(...lockers.map((l) => l.id)) + 1 : 1;
+      const newLocker = { id: nextId, numero, estado };
+      setLockers((prev) => [...prev, newLocker]);
+    }
 
   setNumero("");
   setEstado("Disponible");
@@ -77,114 +86,101 @@ export default function Lockers() {
   };
 
   return (
-    <div className="container mt-5">
-      <div className="card shadow-lg border-0 rounded-4 bg-dark text-light">
-        <div className="card-body p-4">
-          <h2 className="text-center mb-4 text-primary">
-            <i className="bi bi-box-seam me-2"></i> Gestión de Lockers
-          </h2>
+    <Box sx={{ p: 4, backgroundColor: "#121212", minHeight: "100vh" }}>
+      <Card elevation={0} sx={{ backgroundColor: "#1e1e1e", color: "white" }}>
+        <CardContent>
+          <Typography variant="h4" align="left" color="primary" mb={3}>
+            Gestión de Lockers
+          </Typography>
 
-          {/* Formulario */}
-          <div className="border rounded-3 p-3 mb-4 bg-dark">
-            <h5 className="mb-3">{editId ? "Editar Locker" : "Agregar Locker"}</h5>
-            <form className="row g-3" onSubmit={handleSubmit}>
-              <div className="col-md-5">
-                <input
-                  type="text"
-                  className="form-control bg-secondary text-light"
-                  placeholder="Número de Locker (ej: A01, B15)"
-                  value={numero}
-                  maxLength={3}
-                  onChange={(e) => {
-                    // Solo permite formato letra+números, ej: A01, B15
-                    let val = e.target.value.toUpperCase();
-                    val = val.replace(/[^A-B0-9]/g, "");
-                    if (val.length > 0) {
-                      val = val[0].replace(/[^A-B]/, "") + val.slice(1, 3).replace(/[^0-9]/g, "");
-                    }
-                    setNumero(val.slice(0, 3));
-                  }}
-                />
-              </div>
-              <div className="col-md-5">
-                <select
-                  className="form-control bg-secondary text-light"
+          {/* FORMULARIO */}
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 4 }}>
+            <Box display="flex" gap={2} flexWrap="wrap">
+              <TextField
+                label="Número de Locker (ej: A01, B15)"
+                value={numero}
+                onChange={(e) => {
+                  let val = e.target.value.toUpperCase();
+                  val = val.replace(/[^A-B0-9]/g, "");
+                  if (val.length > 0) {
+                    val = val[0].replace(/[^A-B]/, "") + val.slice(1, 3).replace(/[^0-9]/g, "");
+                  }
+                  setNumero(val.slice(0, 3));
+                }}
+                variant="filled"
+                sx={{ backgroundColor: "#2a2a2a", input: { color: "white" }, flex: 1, minWidth: 200 }}
+              />
+              <FormControl variant="filled" sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}>
+                <InputLabel sx={{ color: "#aaa" }}>Estado</InputLabel>
+                <Select
                   value={estado}
                   onChange={(e) => setEstado(e.target.value)}
+                  sx={{ color: "white" }}
                 >
-                  <option value="Disponible">Disponible</option>
-                  <option value="Ocupado">Ocupado</option>
-                  <option value="Mantenimiento">Mantenimiento</option>
-                </select>
-              </div>
-              <div className="col-md-2 d-grid">
-                <button type="submit" className="btn btn-success">
-                  <i className="bi bi-save"></i>
-                </button>
-              </div>
-            </form>
-          </div>
+                  <MenuItem value="Disponible">Disponible</MenuItem>
+                  <MenuItem value="Ocupado">Ocupado</MenuItem>
+                  <MenuItem value="Mantenimiento">Mantenimiento</MenuItem>
+                </Select>
+              </FormControl>
+              <Box display="flex" alignItems="center">
+                <Button type="submit" variant="contained" sx={{ textTransform: "none", px: 3 }}>
+                  {editId ? "Guardar" : "Agregar"}
+                </Button>
+              </Box>
+            </Box>
+          </Box>
 
-          {/* Tabla */}
-          <div className="table-responsive">
-            <table className="table table-hover align-middle table-dark text-light">
-              <thead className="table-primary">
-                <tr>
-                  <th>ID</th>
-                  <th>Número</th>
-                  <th>Ubicación</th>
-                  <th>Estado</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lockers.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="text-center">
-                      No hay lockers registrados
-                    </td>
-                  </tr>
-                ) : (
-                  lockers.map((locker) => (
-                    <tr key={locker.id}>
-                      <td>{locker.id}</td>
-                      <td>{locker.numero}</td>
-                      <td>{getUbicacion(locker.numero)}</td>
-                      <td>
-                        <span
-                          className={`badge px-3 py-2 ${
-                            locker.estado === "Disponible"
-                              ? "bg-success"
-                              : locker.estado === "Ocupado"
-                              ? "bg-danger"
-                              : "bg-warning text-dark"
-                          }`}
-                        >
-                          {locker.estado}
-                        </span>
-                      </td>
-                      <td className="text-center">
-                        <button
-                          className="btn btn-sm btn-warning me-2"
-                          onClick={() => handleEdit(locker.id)}
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleDelete(locker.id)}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+          {/* TABLA */}
+          <Table sx={{ backgroundColor: "#1a1a1a" }}>
+            <TableHead>
+              <TableRow sx={{ backgroundColor: "#1a1a1a" }}>
+                <TableCell sx={{ color: "white" }}>ID</TableCell>
+                <TableCell sx={{ color: "white" }}>Número</TableCell>
+                <TableCell sx={{ color: "white" }}>Ubicación</TableCell>
+                <TableCell sx={{ color: "white" }}>Estado</TableCell>
+                <TableCell sx={{ color: "white" }} align="center">Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {lockers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ color: "white" }}>
+                    No hay lockers registrados
+                  </TableCell>
+                </TableRow>
+              ) : (
+                lockers.map((locker) => (
+                  <TableRow key={locker.id}>
+                    <TableCell sx={{ color: "white" }}>{locker.id}</TableCell>
+                    <TableCell sx={{ color: "white" }}>{locker.numero}</TableCell>
+                    <TableCell sx={{ color: "white" }}>{getUbicacion(locker.numero)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={locker.estado}
+                        color={
+                          locker.estado === "Disponible"
+                            ? "success"
+                            : locker.estado === "Ocupado"
+                            ? "error"
+                            : "warning"
+                        }
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton color="warning" onClick={() => handleEdit(locker.id)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton color="error" onClick={() => handleDelete(locker.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </Box>
+  );
 }

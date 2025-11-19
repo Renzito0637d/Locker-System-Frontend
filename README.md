@@ -5,34 +5,49 @@
 ![MUI](https://img.shields.io/badge/MUI-%230081CB.svg?style=for-the-badge&logo=mui&logoColor=white)
 ![Git](https://img.shields.io/badge/git-%23F05033.svg?style=for-the-badge&logo=git&logoColor=white)
 ![Jira](https://img.shields.io/badge/jira-%230A0FFF.svg?style=for-the-badge&logo=jira&logoColor=white)
+
 ---
 
 App web frontend para un sistema de lockers para la UTP sede norte que permita a los estudiantes y administradores asignar, liberar y monitorear lockers de manera segura, ordenada y eficiente.
 
+---
 
 # 🚀 Instrucciones para clonar y ejecutar el proyecto React
 
 ### 1. Clonar el repositorio
+
 Abre tu terminal y ejecuta:
 
 ```
 git clone https://github.com/Renzito0637d/Locker-System-Frontend.git
 ```
+
 Después entra a la carpeta del proyecto:
+
 ```
 cd Locker-System-Frontend
 ```
+
+```
+cd nombre-del-proyecto
+```
+
 ### 2. Instalar dependencias
+
 ```
 npm install
 ```
+
 ### 3. Ejecutar
+
 Para levantar el servidor local:
+
 ```
 npm start
 ```
 
 La app se abrirá en http://localhost:3000
+
 ## Lista de requerimientos funcionales
 
 | RF   | Descripcion | Estado |

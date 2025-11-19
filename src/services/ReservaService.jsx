@@ -46,3 +46,18 @@ export const createReserva = async (reservaData) => {
 export const deleteReserva = async (id) => {
     await api.delete(`/reservas/${id}`);
 };
+
+export const getAllReservas = async () => {
+    const res = await api.get("/reservas/");
+    return res.data;
+};
+
+// ADMIN: Actualizar una reserva (Aprobar/Rechazar)
+// Nota: Como tu backend usa PUT y espera todo el objeto,
+// enviaremos la data completa modificando solo el estado.
+export const updateReserva = async (id, reservaActualizada) => {
+    // reservaActualizada debe tener formato de Request:
+    // { fechaInicio, fechaFin, estadoReserva, userId, lockerId }
+    const res = await api.put(`/reservas/${id}`, reservaActualizada);
+    return res.data;
+};

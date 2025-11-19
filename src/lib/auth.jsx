@@ -12,3 +12,7 @@ export const getMe = async () => {
 export const logout = async () => {
   return await api.post("/auth/logout");
 };
+
+export const registerEstudiante = async (userData) => {
+  return await api.post("/auth/registerEstudiante", userData);
+};

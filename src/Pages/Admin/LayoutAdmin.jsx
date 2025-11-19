@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import { styled, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import MuiDrawer from "@mui/material/Drawer";
@@ -24,13 +24,8 @@ import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
 import { Avatar, Button, CircularProgress, Dialog, DialogActions, DialogTitle } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useNavigate } from "react-router-dom";
-import { logout } from "../../lib/auth";
+import { getMe, logout } from "../../lib/auth";
 
-const user = {
-  name: "Juan Pérez",
-  email: "juan.perez@ejemplo.com",
-  avatar: "https://img.freepik.com/psd-gratis/ilustracion-3d-avatar-o-perfil-humano_23-2150671122.jpg",
-};
 
 const drawerWidth = 240;
 
@@ -151,6 +146,41 @@ export default function LayoutAdmin({ views }) {
     }
   };
 
+
+  // Usuario datos
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    getMe()
+      .then((data) => {
+        // Construimos la URL del avatar usando el servicio externo
+        // data trae: { userName, apellido, email, ... }
+        const fullName = `${data.userName}+${data.apellido}`;
+        const avatarUrl = `https://ui-avatars.com/api/?name=${fullName}&background=random&color=fff&size=128`;
+
+        setUser({
+          name: `${data.userName} ${data.apellido}`,
+          email: data.email,
+          avatar: avatarUrl,
+        });
+      })
+      .catch((err) => {
+        console.error("Error obteniendo usuario", err);
+        // Manejo opcional: usuario null o placeholder
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+        <CircularProgress size={20} />
+      </Box>
+    );
+  }
+
+  if (!user) return null;
+
   // Render principal
   return (
     <Box sx={{ display: "flex" }}>
@@ -215,7 +245,7 @@ export default function LayoutAdmin({ views }) {
 
         <Divider />
 
-        {/* Cuenta estática pegada abajo */}
+
         <Box
           sx={{
             position: "absolute",
@@ -227,15 +257,19 @@ export default function LayoutAdmin({ views }) {
             borderColor: "divider",
           }}
         >
+
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
               gap: 1.5,
               justifyContent: open ? "flex-start" : "center",
+              // Opcional: Padding para que se vea bien en el sidebar
+              p: 2,
             }}
           >
-            <Avatar src={user.avatar} alt={user.name}>
+            <Avatar src={user.avatar} alt={user.name} sx={{ width: 40, height: 40 }}>
+              {/* Fallback si falla la imagen */}
               {!user.avatar && (user.name?.[0] || "U")}
             </Avatar>
 

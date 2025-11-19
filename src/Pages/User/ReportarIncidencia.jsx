@@ -10,8 +10,11 @@ import {
   CardContent,
   CardActions,
   Divider,
+  IconButton,
 } from "@mui/material";
 import { motion } from "framer-motion";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 const bloques = ["A", "B", "C", "D", "E", "F"];
 const numeros = Array.from({ length: 20 }, (_, i) =>
@@ -23,26 +26,64 @@ export default function ReportarIncidencia() {
   const [numeroSeleccionado, setNumeroSeleccionado] = useState(null);
   const [selectedPart, setSelectedPart] = useState(null);
   const [description, setDescription] = useState("");
-  const [incidencias, setIncidencias] = useState([]);
+  const [editId, setEditId] = useState(null);
 
-  // Cargar incidencias desde localStorage
-  useEffect(() => {
-    const savedIncidencias = JSON.parse(localStorage.getItem("incidencias")) || [];
-    setIncidencias(savedIncidencias);
-  }, []);
+  // Inicializar incidencias desde localStorage (lazy initializer)
+  const [incidencias, setIncidencias] = useState(() => {
+    try {
+      const saved = localStorage.getItem("incidencias");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Error leyendo localStorage:", e);
+      return [];
+    }
+  });
 
-  // Guardar incidencias en localStorage
+  // Guardar incidencias en localStorage cuando cambian
   useEffect(() => {
-    localStorage.setItem("incidencias", JSON.stringify(incidencias));
+    try {
+      localStorage.setItem("incidencias", JSON.stringify(incidencias));
+    } catch (e) {
+      console.error("Error guardando en localStorage:", e);
+    }
   }, [incidencias]);
 
-  // Enviar reporte
+  // Limpiar formulario
+  const resetForm = () => {
+    setBloqueSeleccionado(null);
+    setNumeroSeleccionado(null);
+    setSelectedPart(null);
+    setDescription("");
+    setEditId(null);
+  };
+
+  // Enviar/Guardar reporte (crear o actualizar)
   const handleEnviarReporte = () => {
     if (!bloqueSeleccionado || !numeroSeleccionado || !selectedPart || !description) {
       alert("Por favor completa todos los campos antes de enviar el reporte.");
       return;
     }
 
+    if (editId !== null) {
+      // Actualizar incidencia existente
+      setIncidencias((prev) =>
+        prev.map((inc) =>
+          inc.id === editId
+            ? {
+              ...inc,
+              locker: `${bloqueSeleccionado}-${numeroSeleccionado}`,
+              part: selectedPart,
+              description,
+              date: new Date().toLocaleString(),
+            }
+            : inc
+        )
+      );
+      resetForm();
+      return;
+    }
+
+    // Crear nueva incidencia
     const nuevaIncidencia = {
       id: Date.now(),
       locker: `${bloqueSeleccionado}-${numeroSeleccionado}`,
@@ -51,13 +92,39 @@ export default function ReportarIncidencia() {
       date: new Date().toLocaleString(),
     };
 
-    setIncidencias([nuevaIncidencia, ...incidencias]);
+    setIncidencias((prev) => [nuevaIncidencia, ...prev]);
+    resetForm();
+  };
 
-    // limpiar inputs
-    setBloqueSeleccionado(null);
-    setNumeroSeleccionado(null);
-    setSelectedPart(null);
-    setDescription("");
+  // Eliminar incidencia
+  const handleDelete = (id) => {
+    const ok = window.confirm("¿Eliminar esta incidencia? Esta acción no se puede deshacer.");
+    if (!ok) return;
+    setIncidencias((prev) => prev.filter((inc) => inc.id !== id));
+    // si estamos editando la misma incidencia, limpiar form
+    if (editId === id) resetForm();
+  };
+
+  // Editar incidencia (cargar en formulario)
+  const handleEdit = (id) => {
+    const inc = incidencias.find((i) => i.id === id);
+    if (!inc) return;
+    const [bloque, numero] = inc.locker.split("-");
+    setBloqueSeleccionado(bloque || null);
+    setNumeroSeleccionado(numero || null);
+    setSelectedPart(inc.part || null);
+    setDescription(inc.description || "");
+    setEditId(inc.id);
+    // scroll opcional al form (si quieres)
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Borrar todas (opcional)
+  const handleClearAll = () => {
+    const ok = window.confirm("¿Borrar todas las incidencias guardadas?");
+    if (!ok) return;
+    setIncidencias([]);
+    resetForm();
   };
 
   return (
@@ -120,8 +187,7 @@ export default function ReportarIncidencia() {
           alt="Locker"
           style={{ width: "200px", borderRadius: "8px" }}
           onError={(e) => {
-            e.target.src =
-              "https://via.placeholder.com/200x400.png?text=Locker";
+            e.target.src = "https://via.placeholder.com/200x400.png?text=Locker";
           }}
         />
 
@@ -181,9 +247,9 @@ export default function ReportarIncidencia() {
         rows={3}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        sx={{ mb: 3 }}
+        sx={{ mb: 2 }}
       />
-      <Paper sx={{ p: 2 }}>
+      <Paper sx={{ p: 2, mb: 2 }}>
         <Typography>
           <strong>Locker seleccionado:</strong>{" "}
           {bloqueSeleccionado && numeroSeleccionado
@@ -191,23 +257,36 @@ export default function ReportarIncidencia() {
             : "Ninguno"}
         </Typography>
         <Typography>
-          <strong>Parte seleccionada:</strong>{" "}
-          {selectedPart || "Ninguna"}
+          <strong>Parte seleccionada:</strong> {selectedPart || "Ninguna"}
         </Typography>
         <Typography>
           <strong>Descripción:</strong> {description || "Sin descripción"}
         </Typography>
       </Paper>
-      {/* Botón enviar */}
-      <Button
-        variant="contained"
-        color="success"
-        fullWidth
-        onClick={handleEnviarReporte}
-        sx={{ mb: 4 }}
-      >
-        Enviar Reporte
-      </Button>
+
+      {/* Botones enviar / cancelar / borrar todo */}
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6}>
+          <Button
+            variant="contained"
+            color="success"
+            fullWidth
+            onClick={handleEnviarReporte}
+          >
+            {editId ? "Actualizar Reporte" : "Enviar Reporte"}
+          </Button>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Button variant="outlined" fullWidth onClick={resetForm}>
+            Cancelar
+          </Button>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Button variant="outlined" color="error" fullWidth onClick={handleClearAll}>
+            Borrar todas
+          </Button>
+        </Grid>
+      </Grid>
 
       <Divider sx={{ mb: 3 }} />
 
@@ -225,9 +304,7 @@ export default function ReportarIncidencia() {
             <Grid item xs={12} md={6} lg={4} key={inc.id}>
               <Card sx={{ bgcolor: "#1e1e2f", color: "white" }}>
                 <CardContent>
-                  <Typography variant="h6">
-                    Locker {inc.locker}
-                  </Typography>
+                  <Typography variant="h6">Locker {inc.locker}</Typography>
                   <Typography variant="body2" color="lightblue">
                     Parte: {inc.part}
                   </Typography>
@@ -243,9 +320,22 @@ export default function ReportarIncidencia() {
                   </Typography>
                 </CardContent>
                 <CardActions>
-                  <Button size="small" color="error">
-                    Eliminar
-                  </Button>
+                  <IconButton
+                    size="small"
+                    color="primary"
+                    onClick={() => handleEdit(inc.id)}
+                    title="Editar"
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    color="error"
+                    onClick={() => handleDelete(inc.id)}
+                    title="Eliminar"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
                 </CardActions>
               </Card>
             </Grid>

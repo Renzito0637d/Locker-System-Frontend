@@ -50,8 +50,8 @@ export default function Lockers() {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!numero || numero.length < 2) return;
+  e.preventDefault();
+  if (!numero || numero.length < 2) return;
 
     if (editId !== null) {
       setLockers((prev) =>
@@ -64,9 +64,9 @@ export default function Lockers() {
       setLockers((prev) => [...prev, newLocker]);
     }
 
-    setNumero("");
-    setEstado("Disponible");
-  };
+  setNumero("");
+  setEstado("Disponible");
+};
 
   const handleEdit = (id) => {
     const locker = lockers.find((l) => l.id === id);

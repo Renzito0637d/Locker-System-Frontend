@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import dayjs from "dayjs";
 import {
   Container,
   Typography,
@@ -23,6 +24,11 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 
+const STORAGE_KEYS = {
+  RESERVAS: "reservasLockers_v1",
+  DRAFT: "reservasLockers_draft_v1",
+};
+
 const ReservarLocker = () => {
   const bloques = ["A", "B", "C", "D", "E", "F"];
   const numeros = Array.from({ length: 20 }, (_, i) =>
@@ -37,62 +43,97 @@ const ReservarLocker = () => {
   });
 
   const [openGuide, setOpenGuide] = useState(false);
-
-  // reservas de ejemplo (luego remplazarás por datos reales desde el backend)
-  const [reservas, setReservas] = useState([
-    {
-      id: 1,
-      bloque: "A",
-      numero: "05",
-      fecha: "2025-09-10",
-      hora: "14:00",
-      estado: "Activo",
-    },
-    {
-      id: 2,
-      bloque: "C",
-      numero: "12",
-      fecha: "2025-09-05",
-      hora: "09:30",
-      estado: "Expirado",
-    },
-  ]);
-
-  // id de la reserva seleccionada para cancelar (null = modal cerrado)
+  const [reservas, setReservas] = useState([]);
   const [selectedToCancel, setSelectedToCancel] = useState(null);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  // === cargar datos al montar ===
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.RESERVAS);
+      if (stored) {
+        setReservas(JSON.parse(stored));
+      }
+
+      const draft = localStorage.getItem(STORAGE_KEYS.DRAFT);
+      if (draft) {
+        const pd = JSON.parse(draft);
+        setFormData({
+          bloque: pd.bloque || "",
+          numero: pd.numero || "",
+          fecha: pd.fecha ? dayjs(pd.fecha) : null,
+          hora: pd.hora ? dayjs(pd.hora, "HH:mm") : null,
+        });
+      }
+    } catch (e) {
+      console.error("Error al leer localStorage:", e);
+    }
+  }, []);
+
+  // === guardar reservas ===
+  const saveReservas = (newReservas) => {
+    setReservas(newReservas);
+    localStorage.setItem(STORAGE_KEYS.RESERVAS, JSON.stringify(newReservas));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const nuevaReserva = {
-      id: reservas.length > 0 ? Math.max(...reservas.map(r => r.id)) + 1 : 1,
+  // === guardar draft (cuando el usuario cambia algo) ===
+  useEffect(() => {
+    if (!formData.bloque && !formData.numero && !formData.fecha && !formData.hora) {
+      return; // no guardamos si está vacío
+    }
+
+    const draftToStore = {
       bloque: formData.bloque,
       numero: formData.numero,
       fecha: formData.fecha ? formData.fecha.format("YYYY-MM-DD") : null,
       hora: formData.hora ? formData.hora.format("HH:mm") : null,
-      estado: "Activo",
     };
-    setReservas([...reservas, nuevaReserva]);
-    console.log("Reserva realizada:", nuevaReserva);
-    // opcional: limpiar formulario
-    setFormData({ bloque: "", numero: "", fecha: null, hora: null });
+
+    localStorage.setItem(STORAGE_KEYS.DRAFT, JSON.stringify(draftToStore));
+  }, [formData]);
+
+  // === handlers ===
+  const handleChange = (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   };
 
-  // abrir modal de confirmación indicando la reserva a cancelar
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!formData.bloque || !formData.numero || !formData.fecha || !formData.hora) {
+      alert("Completa bloque, número, fecha y hora.");
+      return;
+    }
+
+    const nuevaReserva = {
+      id: reservas.length > 0 ? Math.max(...reservas.map((r) => r.id)) + 1 : 1,
+      bloque: formData.bloque,
+      numero: formData.numero,
+      fecha: formData.fecha.format("YYYY-MM-DD"),
+      hora: formData.hora.format("HH:mm"),
+      estado: "Activo",
+    };
+
+    const updated = [...reservas, nuevaReserva];
+    saveReservas(updated);
+
+    // limpiar formulario y draft
+    setFormData({ bloque: "", numero: "", fecha: null, hora: null });
+    localStorage.removeItem(STORAGE_KEYS.DRAFT);
+
+    console.log("Reserva realizada:", nuevaReserva);
+  };
+
   const handleCancelClick = (id) => {
     setSelectedToCancel(id);
   };
 
-  // confirmar cancelación: eliminar la reserva seleccionada
   const handleConfirmCancel = () => {
     if (selectedToCancel == null) return;
-    setReservas((prev) => prev.filter((r) => r.id !== selectedToCancel));
+    const updated = reservas.filter((r) => r.id !== selectedToCancel);
+    saveReservas(updated);
     setSelectedToCancel(null);
   };
 
@@ -100,7 +141,6 @@ const ReservarLocker = () => {
     setSelectedToCancel(null);
   };
 
-  // buscar datos de la reserva seleccionada para mostrar en el dialog
   const reservaSeleccionada = reservas.find((r) => r.id === selectedToCancel);
 
   return (
@@ -109,13 +149,12 @@ const ReservarLocker = () => {
         Reservar Locker
       </Typography>
 
-      {/* FORMULARIO DE RESERVA */}
+      {/* FORMULARIO */}
       <Box
         component="form"
         onSubmit={handleSubmit}
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
       >
-        {/* Bloque */}
         <FormControl fullWidth>
           <InputLabel id="bloque-label">Bloque</InputLabel>
           <Select
@@ -133,7 +172,6 @@ const ReservarLocker = () => {
           </Select>
         </FormControl>
 
-        {/* Número */}
         <FormControl fullWidth>
           <InputLabel id="numero-label">Número</InputLabel>
           <Select
@@ -151,68 +189,58 @@ const ReservarLocker = () => {
           </Select>
         </FormControl>
 
-        {/* Fecha y hora */}
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <DatePicker
             label="Fecha"
             value={formData.fecha}
             onChange={(newValue) => {
-              setFormData({ ...formData, fecha: newValue });
+              setFormData((prev) => ({ ...prev, fecha: newValue }));
             }}
             disablePast
             format="DD/MM/YYYY"
-            slotProps={{ textField: { required: true } }}
           />
           <TimePicker
             label="Hora"
             value={formData.hora}
             onChange={(newValue) => {
-              setFormData({ ...formData, hora: newValue });
+              setFormData((prev) => ({ ...prev, hora: newValue }));
             }}
-            slotProps={{ textField: { required: true } }}
           />
         </LocalizationProvider>
-
         {/* Guía (modal informativo) */}
         <Button variant="outlined" onClick={() => setOpenGuide(true)}>
           Ver distribución de lockers
         </Button>
-
-        <Dialog
-          open={openGuide}
-          onClose={() => setOpenGuide(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>Distribución de lockers</DialogTitle>
+        <Dialog open={openGuide} onClose={() => setOpenGuide(false)} maxWidth="md" fullWidth >
+          <DialogTitle>
+            Distribución de lockers
+          </DialogTitle>
           <DialogContent dividers>
             <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <img
-                src="/images/guia-lockers.png"
-                alt="Distribución de lockers"
-                style={{ maxWidth: "100%", borderRadius: 8 }}
-              />
+              <img src="/images/guia-lockers.png" alt="Distribución de lockers" style={{ maxWidth: "100%", borderRadius: 8 }} />
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenGuide(false)}>Cerrar</Button>
+            <Button onClick={() => setOpenGuide(false)}>
+              Cerrar
+            </Button>
           </DialogActions>
         </Dialog>
-
-        {/* Submit */}
         <Button type="submit" variant="contained" color="primary">
           Reservar
         </Button>
       </Box>
 
-      {/* SECCIÓN DE LOCKERS RESERVADOS (cards) */}
+      {/* LISTA DE RESERVAS */}
       <Box sx={{ mt: 5 }}>
         <Typography variant="h6" gutterBottom>
           Mis Lockers Reservados
         </Typography>
 
         {reservas.length === 0 ? (
-          <Typography color="text.secondary">No tienes lockers reservados aún.</Typography>
+          <Typography color="text.secondary">
+            No tienes lockers reservados aún.
+          </Typography>
         ) : (
           <Box
             sx={{
@@ -253,7 +281,7 @@ const ReservarLocker = () => {
         )}
       </Box>
 
-      {/* DIALOGO DE CONFIRMACIÓN DE CANCELACIÓN */}
+      {/* CONFIRMAR CANCELACIÓN */}
       <Dialog
         open={selectedToCancel !== null}
         onClose={handleCloseCancel}
@@ -269,8 +297,8 @@ const ReservarLocker = () => {
                 <strong>
                   {reservaSeleccionada.bloque}-{reservaSeleccionada.numero}
                 </strong>{" "}
-                programada para <strong>{reservaSeleccionada.fecha}</strong> a las{" "}
-                <strong>{reservaSeleccionada.hora}</strong>?
+                programada para <strong>{reservaSeleccionada.fecha}</strong> a
+                las <strong>{reservaSeleccionada.hora}</strong>?
               </>
             ) : (
               "¿Estás seguro que deseas cancelar esta reserva?"

@@ -25,6 +25,7 @@ import { Avatar, Button, CircularProgress, Dialog, DialogActions, DialogTitle } 
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useNavigate } from "react-router-dom";
 import { getMe, logout } from "../../lib/auth";
+import { EventAvailable } from "@mui/icons-material";
 
 
 const drawerWidth = 240;
@@ -126,6 +127,7 @@ export default function LayoutAdmin({ views }) {
     { key: "lockers", label: "Lockers", icon: <Inventory2RoundedIcon /> }, // “casilleros”
     { key: "ubicacion", label: "Ubicaciones", icon: <PlaceRoundedIcon /> },
     { key: "reportes", label: "Reportes", icon: <ReportProblemRoundedIcon /> },
+    { key: "reservas", label: "Reservas", icon: <EventAvailable /> }
   ];
 
   const navigate = useNavigate();

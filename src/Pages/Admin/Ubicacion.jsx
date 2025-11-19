@@ -9,154 +9,189 @@ import {
     TableHead,
     TableRow,
     IconButton,
+    Typography,
+    Paper,
+    MenuItem
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { createUbicacion, deleteUbicacion, getUbicaciones, updateUbicacion } from "../../services/UbicacionService";
 
 export default function Ubicacion() {
-    const [ubicaciones, setUbicaciones] = useState(() => {
-        const dataGuardada = localStorage.getItem("ubicaciones");
-        return dataGuardada
-            ? JSON.parse(dataGuardada)
-            : [
-                  {
-                      id: 1,
-                      nombre: "Edificio A",
-                      descripcion: "Primer piso, pasillo central",
-                      pabellon: "A",
-                      piso: 1,
-                  },
-                  {
-                      id: 2,
-                      nombre: "Edificio B",
-                      descripcion: "Segundo piso, junto a la cafetería",
-                      pabellon: "B",
-                      piso: 2,
-                  },
-                  {
-                      id: 3,
-                      nombre: "Gimnasio",
-                      descripcion: "Entrada principal",
-                      pabellon: "A",
-                      piso: 1,
-                  },
-              ];
-    });
+    // 1. Estado para la lista de la tabla
+    const [ubicaciones, setUbicaciones] = useState([]);
 
-    const [newPlace, setNewPlace] = useState({
-        nombre: "",
-        descripcion: "",
+    // 2. Estado para el formulario (Coincide con UbicacionRequest.java)
+    const initialFormState = {
+        nombreEdificio: "", // ANTES "nombre", AHORA "nombreEdificio"
         pabellon: "",
         piso: "",
-    });
+        descripcion: ""
+    };
+    const [form, setForm] = useState(initialFormState);
 
+    // 3. Estado para controlar si editamos o creamos
     const [editId, setEditId] = useState(null);
 
+    // CARGAR DATOS AL INICIO
     useEffect(() => {
-        localStorage.setItem("ubicaciones", JSON.stringify(ubicaciones));
-    }, [ubicaciones]);
+        cargarDatos();
+    }, []);
 
-    const handleAddPlace = () => {
-        if (!newPlace.nombre || !newPlace.descripcion) return;
+    const cargarDatos = async () => {
+    try {
+        const data = await getUbicaciones();
+        console.log("Datos recibidos del backend:", data); // <--- MIRA LA CONSOLA DEL NAVEGADOR
 
-        if (editId !== null) {
-            // EDITAR
-            setUbicaciones((prev) =>
-                prev.map((u) =>
-                    u.id === editId ? { ...u, ...newPlace } : u
-                )
-            );
-            setEditId(null);
-        } else {
-            // AGREGAR
-            const nextId =
-                ubicaciones.length > 0
-                    ? Math.max(...ubicaciones.map((u) => u.id)) + 1
-                    : 1;
-            setUbicaciones([
-                ...ubicaciones,
-                {
-                    id: nextId,
-                    ...newPlace,
-                },
-            ]);
+        // CASO A: Spring Boot devuelve una lista directa: [ {..}, {..} ]
+        if (Array.isArray(data)) {
+            setUbicaciones(data);
+        } 
+        // CASO B: Spring Boot devuelve Paginación: { content: [..], pageable: {..} }
+        else if (data.content && Array.isArray(data.content)) {
+            setUbicaciones(data.content);
+        }
+        // CASO C: Algún otro error u objeto vacío
+        else {
+            console.warn("El formato recibido no es una lista", data);
+            setUbicaciones([]); // Evita que rompa la pantalla
         }
 
-        setNewPlace({ nombre: "", descripcion: "", pabellon: "", piso: "" });
+    } catch (error) {
+        console.error("Error cargando ubicaciones:", error);
+        setUbicaciones([]); // En caso de error, lista vacía
+    }
+};
+
+    // MANEJAR CAMBIOS EN INPUTS
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setForm({ ...form, [name]: value });
     };
 
-    const handleEdit = (id) => {
-        const lugar = ubicaciones.find((u) => u.id === id);
-        if (!lugar) return;
-        setEditId(id);
-        setNewPlace({
-            nombre: lugar.nombre,
-            descripcion: lugar.descripcion,
-            pabellon: lugar.pabellon,
-            piso: lugar.piso,
+    // GUARDAR (CREAR O EDITAR)
+    const handleSave = async () => {
+        // Validacion simple
+        if (!form.nombreEdificio || !form.pabellon || !form.piso) {
+            alert("Completa los campos obligatorios");
+            return;
+        }
+
+        try {
+            if (editId) {
+                // MODO EDICIÓN (PUT)
+                await updateUbicacion(editId, form);
+            } else {
+                // MODO CREACIÓN (POST)
+                await createUbicacion(form);
+            }
+
+            // Resetear formulario y recargar tabla
+            setForm(initialFormState);
+            setEditId(null);
+            cargarDatos();
+        } catch (error) {
+            console.error("Error guardando:", error);
+            alert("Error al guardar. Revisa la consola.");
+        }
+    };
+
+    // PREPARAR EDICIÓN
+    const handleEdit = (ubicacion) => {
+        setEditId(ubicacion.id);
+        setForm({
+            nombreEdificio: ubicacion.nombreEdificio,
+            pabellon: ubicacion.pabellon,
+            piso: ubicacion.piso,
+            descripcion: ubicacion.descripcion || ""
         });
     };
 
-    const handleDelete = (id) => {
-        setUbicaciones((prev) => prev.filter((u) => u.id !== id));
-        if (editId === id) {
-            setEditId(null);
-            setNewPlace({ nombre: "", descripcion: "", pabellon: "", piso: "" });
+    // ELIMINAR
+    const handleDelete = async (id) => {
+        if (!window.confirm("¿Seguro de eliminar esta ubicación?")) return;
+
+        try {
+            await deleteUbicacion(id);
+            cargarDatos();
+        } catch (error) {
+            console.error("Error eliminando:", error);
         }
     };
 
     return (
         <Box p={3} sx={{ backgroundColor: "#121212", minHeight: "100vh" }}>
+            <Typography variant="h5" color="white" mb={2}>Gestión de Ubicaciones</Typography>
+
             {/* ------------------- FORMULARIO ------------------- */}
-            <Box display="flex" flexDirection="column" gap={2} mb={3} sx={{ width: "100%" }}>
+            <Box display="flex" flexDirection="column" gap={2} mb={3} component={Paper} sx={{ p: 2, backgroundColor: '#1e1e1e' }}>
                 <Box display="flex" gap={2} flexWrap="wrap" sx={{ width: "100%" }}>
+                    {/* OJO: El 'name' debe coincidir con la key del estado 'form' */}
                     <TextField
-                        label="Nombre"
-                        value={newPlace.nombre}
-                        onChange={(e) => setNewPlace({ ...newPlace, nombre: e.target.value })}
-                        sx={{ minWidth: 300, flex: 1}}
-                        
+                        label="Nombre Edificio"
+                        name="nombreEdificio"
+                        value={form.nombreEdificio}
+                        onChange={handleChange}
+                        sx={{ minWidth: 300, flex: 1, input: { color: 'white' }, label: { color: 'gray' } }}
+                        variant="outlined"
                     />
 
                     <TextField
+                        select // <--- Esto lo convierte en dropdown
                         label="Pabellón"
-                        value={newPlace.pabellon}
-                        onChange={(e) => setNewPlace({ ...newPlace, pabellon: e.target.value })}
-                        sx={{ minWidth: 250, flex: 1}}
-                        
-                    />
+                        name="pabellon"
+                        value={form.pabellon}
+                        onChange={handleChange}
+                        sx={{ 
+                            minWidth: 250, 
+                            flex: 1, 
+                            // Color del texto seleccionado
+                            "& .MuiSelect-select": { color: "white" },
+                            // Color del label
+                            "& .MuiInputLabel-root": { color: "gray" },
+                            // Color de la flechita del dropdown
+                            "& .MuiSvgIcon-root": { color: "white" }
+                        }}
+                    >
+                        <MenuItem value="A">Pabellón A</MenuItem>
+                        <MenuItem value="B">Pabellón B</MenuItem>
+                    </TextField>
 
                     <TextField
                         label="Piso"
-                        value={newPlace.piso}
-                        onChange={(e) => setNewPlace({ ...newPlace, piso: e.target.value })}
-                        sx={{ minWidth: 200, flex: 1}}
-                        
+                        name="piso"
+                        value={form.piso}
+                        onChange={handleChange}
+                        sx={{ minWidth: 200, flex: 1, input: { color: 'white' }, label: { color: 'gray' } }}
                     />
                 </Box>
 
                 <TextField
                     label="Descripción"
+                    name="descripcion"
                     multiline
-                    rows={4}
-                    value={newPlace.descripcion}
-                    onChange={(e) => setNewPlace({ ...newPlace, descripcion: e.target.value })}
-                    sx={{ width: "100%"}}
-                    
+                    rows={2}
+                    value={form.descripcion}
+                    onChange={handleChange}
+                    sx={{ width: "100%", textarea: { color: 'white' }, label: { color: 'gray' } }}
                 />
 
-                <Box display="flex" justifyContent="flex-end">
+                <Box display="flex" justifyContent="flex-end" gap={2}>
+                    {editId && (
+                        <Button
+                            variant="outlined"
+                            color="secondary"
+                            onClick={() => { setEditId(null); setForm(initialFormState); }}
+                        >
+                            Cancelar
+                        </Button>
+                    )}
                     <Button
                         variant="contained"
-                        onClick={handleAddPlace}
-                        sx={{
-                            textTransform: "none",
-                            boxShadow: "none",
-                            borderRadius: 0,
-                            px: 4,
-                        }}
+                        onClick={handleSave}
+                        sx={{ textTransform: "none", px: 4 }}
                     >
-                        {editId ? "Guardar" : "Agregar"}
+                        {editId ? "Actualizar" : "Agregar"}
                     </Button>
                 </Box>
             </Box>
@@ -164,9 +199,9 @@ export default function Ubicacion() {
             {/* ------------------- TABLA ------------------- */}
             <Table sx={{ backgroundColor: "#1a1a1a" }}>
                 <TableHead>
-                    <TableRow sx={{ backgroundColor: "#1a1a1a" }}>
+                    <TableRow sx={{ backgroundColor: "#333" }}>
                         <TableCell sx={{ color: "white" }}>ID</TableCell>
-                        <TableCell sx={{ color: "white" }}>Nombre</TableCell>
+                        <TableCell sx={{ color: "white" }}>Edificio</TableCell>
                         <TableCell sx={{ color: "white" }}>Pabellón</TableCell>
                         <TableCell sx={{ color: "white" }}>Piso</TableCell>
                         <TableCell sx={{ color: "white" }}>Descripción</TableCell>
@@ -177,12 +212,12 @@ export default function Ubicacion() {
                     {ubicaciones.map((u) => (
                         <TableRow key={u.id}>
                             <TableCell sx={{ color: "white" }}>{u.id}</TableCell>
-                            <TableCell sx={{ color: "white" }}>{u.nombre}</TableCell>
+                            <TableCell sx={{ color: "white" }}>{u.nombreEdificio}</TableCell>
                             <TableCell sx={{ color: "white" }}>{u.pabellon}</TableCell>
                             <TableCell sx={{ color: "white" }}>{u.piso}</TableCell>
                             <TableCell sx={{ color: "white" }}>{u.descripcion}</TableCell>
                             <TableCell align="center">
-                                <IconButton color="warning" onClick={() => handleEdit(u.id)}>
+                                <IconButton color="warning" onClick={() => handleEdit(u)}>
                                     <EditIcon />
                                 </IconButton>
                                 <IconButton color="error" onClick={() => handleDelete(u.id)}>
@@ -191,6 +226,13 @@ export default function Ubicacion() {
                             </TableCell>
                         </TableRow>
                     ))}
+                    {ubicaciones.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{ color: "gray" }}>
+                                No hay ubicaciones registradas
+                            </TableCell>
+                        </TableRow>
+                    )}
                 </TableBody>
             </Table>
         </Box>

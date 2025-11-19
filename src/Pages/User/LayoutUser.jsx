@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { styled, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
@@ -23,13 +23,7 @@ import { Avatar, Button, CircularProgress, Dialog, DialogActions, DialogTitle } 
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import { EventAvailable } from "@mui/icons-material";
-import { logout } from "../../lib/auth";
-
-const user = {
-  name: "Luis Sánchez",
-  email: "luis.sanchez@gmail.com",
-  avatar: "https://img.freepik.com/psd-gratis/ilustracion-3d-avatar-o-perfil-humano_23-2150671122.jpg",
-};
+import { getMe, logout } from "../../lib/auth";
 
 const drawerWidth = 240;
 
@@ -134,7 +128,6 @@ export default function LayoutUser({ viewsUser }) {
   ];
 
   const navigate = useNavigate();
-  const [loading, setLoading] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
 
   const handleLogout = async () => {
@@ -150,6 +143,41 @@ export default function LayoutUser({ viewsUser }) {
       setConfirmOpen(false);
     }
   };
+
+  // Usuario datos
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getMe()
+      .then((data) => {
+        // Construimos la URL del avatar usando el servicio externo
+        // data trae: { userName, apellido, email, ... }
+        const fullName = `${data.userName}+${data.apellido}`;
+        const avatarUrl = `https://ui-avatars.com/api/?name=${fullName}&background=random&color=fff&size=128`;
+
+        setUser({
+          name: `${data.userName} ${data.apellido}`,
+          email: data.email,
+          avatar: avatarUrl,
+        });
+      })
+      .catch((err) => {
+        console.error("Error obteniendo usuario", err);
+        // Manejo opcional: usuario null o placeholder
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+        <CircularProgress size={20} />
+      </Box>
+    );
+  }
+
+  if (!user) return null;
 
   // Render principal
   return (
@@ -215,7 +243,7 @@ export default function LayoutUser({ viewsUser }) {
 
         <Divider />
 
-        {/* Cuenta estática pegada abajo */}
+
         <Box
           sx={{
             position: "absolute",
@@ -233,9 +261,12 @@ export default function LayoutUser({ viewsUser }) {
               alignItems: "center",
               gap: 1.5,
               justifyContent: open ? "flex-start" : "center",
+              // Opcional: Padding para que se vea bien en el sidebar
+              p: 2,
             }}
           >
-            <Avatar src={user.avatar} alt={user.name}>
+            <Avatar src={user.avatar} alt={user.name} sx={{ width: 40, height: 40 }}>
+              {/* Fallback si falla la imagen */}
               {!user.avatar && (user.name?.[0] || "U")}
             </Avatar>
 

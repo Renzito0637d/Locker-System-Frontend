@@ -27,6 +27,8 @@ export default function Lockers() {
   const [lockers, setLockers] = useState([]);
   const [numero, setNumero] = useState("");
   const [estado, setEstado] = useState("disponible");
+  const [ubicaciones, setUbicaciones] = useState([]);
+  const [ubicacionId, setUbicacionId] = useState("");
   const [editId, setEditId] = useState(null);
 
   // 1. Cargar desde backend
@@ -35,6 +37,12 @@ export default function Lockers() {
       .then((res) => res.json())
       .then((data) => setLockers(data))
       .catch(() => console.log("Error cargando lockers"));
+  }, []);
+  useEffect(() => {
+    fetch("http://localhost:8081/api/ubicaciones")
+      .then((res) => res.json())
+      .then((data) => setUbicaciones(data))
+      .catch(() => console.log("Error cargando ubicaciones"));
   }, []);
 
   // 2. Crear o editar
@@ -45,7 +53,7 @@ export default function Lockers() {
     const body = {
       numeroLocker: numero,
       estado: estado.toLowerCase(),
-      ubicacionId: 1,
+      ubicacionId: ubicacionId,
     };
 
     try {
@@ -75,7 +83,7 @@ export default function Lockers() {
           return;
         }
 
-        const updated =   await res.json();
+        const updated = await res.json();
         setLockers((prev) => prev.map((l) => (l.id === editId ? updated : l)));
         setEditId(null);
       }
@@ -137,6 +145,23 @@ export default function Lockers() {
                 <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
               </Select>
             </FormControl>
+            <FormControl
+              variant="filled"
+              sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+            >
+              <InputLabel sx={{ color: "#aaa" }}>Ubicación</InputLabel>
+              <Select
+                value={ubicacionId}
+                onChange={(e) => setUbicacionId(e.target.value)}
+                sx={{ color: "white" }}
+              >
+                {ubicaciones.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>
+                    {u.pabellon} - {u.piso}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
             <Button type="submit" variant="contained">
               {editId ? "Actualizar" : "Agregar"}
@@ -150,6 +175,7 @@ export default function Lockers() {
                 <TableCell sx={{ color: "white" }}>ID</TableCell>
                 <TableCell sx={{ color: "white" }}>Número</TableCell>
                 <TableCell sx={{ color: "white" }}>Estado</TableCell>
+                <TableCell sx={{ color: "white" }}>Ubicación</TableCell>
                 <TableCell sx={{ color: "white" }} align="center">
                   Acciones
                 </TableCell>
@@ -175,6 +201,9 @@ export default function Lockers() {
                           : "warning"
                       }
                     />
+                  </TableCell>
+                  <TableCell sx={{ color: "white" }}>
+                    {locker.ubicacion}
                   </TableCell>
 
                   <TableCell align="center">
@@ -206,6 +235,7 @@ export default function Lockers() {
           </Table>
         </CardContent>
       </Card>
-    </Box>
-  );
+         
+    </Box>
+  );
 }

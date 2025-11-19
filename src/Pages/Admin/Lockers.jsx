@@ -172,7 +172,7 @@ export default function Lockers() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ color: "white" }}>ID</TableCell>
+                
                 <TableCell sx={{ color: "white" }}>Número</TableCell>
                 <TableCell sx={{ color: "white" }}>Estado</TableCell>
                 <TableCell sx={{ color: "white" }}>Ubicación</TableCell>
@@ -185,7 +185,7 @@ export default function Lockers() {
             <TableBody>
               {lockers.map((locker) => (
                 <TableRow key={locker.id}>
-                  <TableCell sx={{ color: "white" }}>{locker.id}</TableCell>
+                  
                   <TableCell sx={{ color: "white" }}>
                     {locker.numeroLocker}
                   </TableCell>

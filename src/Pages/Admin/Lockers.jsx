@@ -21,7 +21,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-const API = "http://localhost:8081/api/lockers";
+const API = "https://locker-system-backendv2.onrender.com/api/lockers";
 
 export default function Lockers() {
   const [lockers, setLockers] = useState([]);
@@ -41,7 +41,7 @@ export default function Lockers() {
       .catch(() => console.log("Error cargando lockers"));
   }, []);
   useEffect(() => {
-    fetch("http://localhost:8081/api/ubicaciones")
+    fetch("https://locker-system-backendv2.onrender.com/api/ubicaciones")
       .then((res) => res.json())
       .then((data) => setUbicaciones(data))
       .catch(() => console.log("Error cargando ubicaciones"));
@@ -124,74 +124,74 @@ export default function Lockers() {
 
           {/* FORM */}
           <Box
-  component="form"
-  onSubmit={handleSubmit}
-  sx={{ display: "flex", gap: 2, mb: 4 }}
->
-  <TextField
-    label="Número"
-    value={numero}
-    onChange={(e) => setNumero(e.target.value.toUpperCase())}
-    variant="filled"
-    sx={{ backgroundColor: "#2a2a2a", input: { color: "white" } }}
-  />
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{ display: "flex", gap: 2, mb: 4 }}
+          >
+            <TextField
+              label="Número"
+              value={numero}
+              onChange={(e) => setNumero(e.target.value.toUpperCase())}
+              variant="filled"
+              sx={{ backgroundColor: "#2a2a2a", input: { color: "white" } }}
+            />
 
-  <FormControl
-    variant="filled"
-    sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
-  >
-    <InputLabel sx={{ color: "#aaa" }}>Estado</InputLabel>
-    <Select
-      value={estado}
-      onChange={(e) => setEstado(e.target.value)}
-      sx={{ color: "white" }}
-    >
-      <MenuItem value="disponible">Disponible</MenuItem>
-      <MenuItem value="ocupado">Ocupado</MenuItem>
-      <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
-    </Select>
-  </FormControl>
-  
-  <FormControl
-    variant="filled"
-    sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
-  >
-    <InputLabel sx={{ color: "#aaa" }}>Ubicación</InputLabel>
-    <Select
-      value={ubicacionId}
-      onChange={(e) => setUbicacionId(e.target.value)}
-      sx={{ color: "white" }}
-    >
-      {ubicaciones.map((u) => (
-        <MenuItem key={u.id} value={u.id}>
-          {u.pabellon} - {u.piso}
-        </MenuItem>
-      ))}
-    </Select>
-  </FormControl>
+            <FormControl
+              variant="filled"
+              sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+            >
+              <InputLabel sx={{ color: "#aaa" }}>Estado</InputLabel>
+              <Select
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                sx={{ color: "white" }}
+              >
+                <MenuItem value="disponible">Disponible</MenuItem>
+                <MenuItem value="ocupado">Ocupado</MenuItem>
+                <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
+              </Select>
+            </FormControl>
 
-  {/* FILTRO ESTADO movido antes del botón */}
-  <FormControl
-    variant="filled"
-    sx={{ minWidth: 200, backgroundColor: "#2a2a2a" }}
-  >
-    <InputLabel sx={{ color: "#aaa" }}>Filtrar por estado</InputLabel>
-    <Select
-      value={filtroEstado}
-      onChange={(e) => setFiltroEstado(e.target.value)}
-      sx={{ color: "white" }}
-    >
-      <MenuItem value="todos">Todos</MenuItem>
-      <MenuItem value="disponible">Disponible</MenuItem>
-      <MenuItem value="ocupado">Ocupado</MenuItem>
-      <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
-    </Select>
-  </FormControl>
+            <FormControl
+              variant="filled"
+              sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+            >
+              <InputLabel sx={{ color: "#aaa" }}>Ubicación</InputLabel>
+              <Select
+                value={ubicacionId}
+                onChange={(e) => setUbicacionId(e.target.value)}
+                sx={{ color: "white" }}
+              >
+                {ubicaciones.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>
+                    {u.pabellon} - {u.piso}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-  <Button type="submit" variant="contained">
-    {editId ? "Actualizar" : "Agregar"}
-  </Button>
-</Box>
+            {/* FILTRO ESTADO movido antes del botón */}
+            <FormControl
+              variant="filled"
+              sx={{ minWidth: 200, backgroundColor: "#2a2a2a" }}
+            >
+              <InputLabel sx={{ color: "#aaa" }}>Filtrar por estado</InputLabel>
+              <Select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                sx={{ color: "white" }}
+              >
+                <MenuItem value="todos">Todos</MenuItem>
+                <MenuItem value="disponible">Disponible</MenuItem>
+                <MenuItem value="ocupado">Ocupado</MenuItem>
+                <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Button type="submit" variant="contained">
+              {editId ? "Actualizar" : "Agregar"}
+            </Button>
+          </Box>
 
 
           {/* TABLA */}
@@ -221,8 +221,8 @@ export default function Lockers() {
                         locker.estado === "disponible"
                           ? "success"
                           : locker.estado === "ocupado"
-                          ? "error"
-                          : "warning"
+                            ? "error"
+                            : "warning"
                       }
                     />
                   </TableCell>
@@ -259,7 +259,7 @@ export default function Lockers() {
           </Table>
         </CardContent>
       </Card>
-         
+
     </Box>
   );
 }

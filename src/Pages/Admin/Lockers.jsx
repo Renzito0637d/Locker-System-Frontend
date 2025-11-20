@@ -94,7 +94,7 @@ export default function Lockers() {
     }
 
     setNumero("");
-    setEstado("disponible");
+    setEstado("DISPONIBLE");
   };
 
   // 3. Preparar edición
@@ -146,9 +146,9 @@ export default function Lockers() {
                 onChange={(e) => setEstado(e.target.value)}
                 sx={{ color: "white" }}
               >
-                <MenuItem value="disponible">Disponible</MenuItem>
-                <MenuItem value="ocupado">Ocupado</MenuItem>
-                <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
+                <MenuItem value="DISPONIBLE">Disponible</MenuItem>
+                <MenuItem value="OCUPADO">Ocupado</MenuItem>
+                <MenuItem value="MANTENIMIENTO">Mantenimiento</MenuItem>
               </Select>
             </FormControl>
 

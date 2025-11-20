@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://locker-system-backendv2.onrender.com", // ✅ solo aquí se define una vez
+  baseURL: "https://locker-system-backendv2.onrender.com/api",// ✅ solo aquí se define una vez
   withCredentials: true, // necesario para enviar y recibir cookies JWT
 });
 

@@ -1,190 +1,265 @@
 import React, { useState, useEffect } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  IconButton,
+  FormControl,
+  InputLabel,
+  Chip,
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+
+const API = "http://localhost:8081/api/lockers";
 
 export default function Lockers() {
-  // Cargar datos desde localStorage al iniciar
-  const [lockers, setLockers] = useState(() => {
-    const saved = localStorage.getItem("lockers");
-    return saved
-      ? JSON.parse(saved)
-      : [
-          { id: 1, numero: "A01", estado: "Disponible" },
-          { id: 2, numero: "B02", estado: "Ocupado" },
-          { id: 3, numero: "A15", estado: "Disponible" },
-        ];
-  });
-
-  // Guardar en localStorage cada vez que cambie lockers
-  useEffect(() => {
-    localStorage.setItem("lockers", JSON.stringify(lockers));
-  }, [lockers]);
-
+  const [lockers, setLockers] = useState([]);
   const [numero, setNumero] = useState("");
-  const [estado, setEstado] = useState("Disponible");
+  const [estado, setEstado] = useState("disponible");
+  const [ubicaciones, setUbicaciones] = useState([]);
+  const [ubicacionId, setUbicacionId] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("todos");
+
   const [editId, setEditId] = useState(null);
 
-  // Extrae pabellón y piso del número (ej: "A15" => "A", 15)
-  const getUbicacion = (numero) => {
-    if (!numero || numero.length < 2) return "";
-    const pabellon = numero[0].toUpperCase();
-    const piso = parseInt(numero.slice(1), 10);
-    if (isNaN(piso)) return `Pabellón ${pabellon}`;
-    return `Pabellón ${pabellon}, Piso ${piso}`;
-  };
+  // 1. Cargar desde backend
+  useEffect(() => {
+    fetch(API + "/")
+      .then((res) => res.json())
+      .then((data) => setLockers(data))
+      .catch(() => console.log("Error cargando lockers"));
+  }, []);
+  useEffect(() => {
+    fetch("http://localhost:8081/api/ubicaciones")
+      .then((res) => res.json())
+      .then((data) => setUbicaciones(data))
+      .catch(() => console.log("Error cargando ubicaciones"));
+  }, []);
 
-  const handleSubmit = (e) => {
-  e.preventDefault();
-  if (!numero || numero.length < 2) return;
+  // 2. Crear o editar
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!numero) return;
 
-  if (editId !== null) {
-    setLockers((prev) =>
-      prev.map((l) =>
-        l.id === editId ? { ...l, numero, estado } : l
-      )
-    );
-    setEditId(null);
-  } else {
-    // Calcula el siguiente ID correlativo
-    const nextId = lockers.length > 0 ? Math.max(...lockers.map(l => l.id)) + 1 : 1;
-    const newLocker = {
-      id: nextId,
-      numero,
-      estado,
+    const body = {
+      numeroLocker: numero,
+      estado: estado.toLowerCase(),
+      ubicacionId: ubicacionId,
     };
-    setLockers((prev) => [...prev, newLocker]);
-  }
 
-  setNumero("");
-  setEstado("Disponible");
-};
+    try {
+      if (editId === null) {
+        const res = await fetch(API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
 
-  const handleEdit = (id) => {
-    const locker = lockers.find((l) => l.id === id);
-    if (!locker) return;
-    setEditId(locker.id);
-    setNumero(locker.numero);
-    setEstado(locker.estado);
-  };
+        if (!res.ok) {
+          console.log("Error backend:", res.status);
+          return;
+        }
 
-  const handleDelete = (id) => {
-    setLockers((prev) => prev.filter((l) => l.id !== id));
-    if (editId === id) {
-      setEditId(null);
-      setNumero("");
-      setEstado("Disponible");
+        const newLocker = await res.json();
+        setLockers((prev) => [...prev, newLocker]);
+      } else {
+        const res = await fetch(`${API}/${editId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          console.log("Error backend:", res.status);
+          return;
+        }
+
+        const updated = await res.json();
+        setLockers((prev) => prev.map((l) => (l.id === editId ? updated : l)));
+        setEditId(null);
+      }
+    } catch (error) {
+      console.log("Error guardando locker", error);
     }
+
+    setNumero("");
+    setEstado("disponible");
   };
+
+  // 3. Preparar edición
+  const handleEdit = (locker) => {
+    setEditId(locker.id);
+    setNumero(locker.numeroLocker);
+    setEstado(locker.estado.toLowerCase());
+  };
+
+  // 4. Eliminar
+  const handleDelete = async (id) => {
+    await fetch(`${API}/${id}`, { method: "DELETE" });
+    setLockers((prev) => prev.filter((l) => l.id !== id));
+  };
+  const lockersFiltrados = lockers.filter((l) => {
+    if (filtroEstado === "todos") return true;
+    return l.estado.toLowerCase() === filtroEstado.toLowerCase();
+  });
 
   return (
-    <div className="container mt-5">
-      <div className="card shadow-lg border-0 rounded-4 bg-dark text-light">
-        <div className="card-body p-4">
-          <h2 className="text-center mb-4 text-primary">
-            <i className="bi bi-box-seam me-2"></i> Gestión de Lockers
-          </h2>
+    <Box sx={{ p: 4, backgroundColor: "#121212", minHeight: "100vh" }}>
+      <Card elevation={0} sx={{ backgroundColor: "#1e1e1e", color: "white" }}>
+        <CardContent>
+          <Typography variant="h4" color="primary" mb={3}>
+            Gestión de Lockers
+          </Typography>
 
-          {/* Formulario */}
-          <div className="border rounded-3 p-3 mb-4 bg-dark">
-            <h5 className="mb-3">{editId ? "Editar Locker" : "Agregar Locker"}</h5>
-            <form className="row g-3" onSubmit={handleSubmit}>
-              <div className="col-md-5">
-                <input
-                  type="text"
-                  className="form-control bg-secondary text-light"
-                  placeholder="Número de Locker (ej: A01, B15)"
-                  value={numero}
-                  maxLength={3}
-                  onChange={(e) => {
-                    // Solo permite formato letra+números, ej: A01, B15
-                    let val = e.target.value.toUpperCase();
-                    val = val.replace(/[^A-B0-9]/g, "");
-                    if (val.length > 0) {
-                      val = val[0].replace(/[^A-B]/, "") + val.slice(1, 3).replace(/[^0-9]/g, "");
-                    }
-                    setNumero(val.slice(0, 3));
-                  }}
-                />
-              </div>
-              <div className="col-md-5">
-                <select
-                  className="form-control bg-secondary text-light"
-                  value={estado}
-                  onChange={(e) => setEstado(e.target.value)}
-                >
-                  <option value="Disponible">Disponible</option>
-                  <option value="Ocupado">Ocupado</option>
-                  <option value="Mantenimiento">Mantenimiento</option>
-                </select>
-              </div>
-              <div className="col-md-2 d-grid">
-                <button type="submit" className="btn btn-success">
-                  <i className="bi bi-save"></i>
-                </button>
-              </div>
-            </form>
-          </div>
+          {/* FORM */}
+          <Box
+  component="form"
+  onSubmit={handleSubmit}
+  sx={{ display: "flex", gap: 2, mb: 4 }}
+>
+  <TextField
+    label="Número"
+    value={numero}
+    onChange={(e) => setNumero(e.target.value.toUpperCase())}
+    variant="filled"
+    sx={{ backgroundColor: "#2a2a2a", input: { color: "white" } }}
+  />
 
-          {/* Tabla */}
-          <div className="table-responsive">
-            <table className="table table-hover align-middle table-dark text-light">
-              <thead className="table-primary">
-                <tr>
-                  <th>ID</th>
-                  <th>Número</th>
-                  <th>Ubicación</th>
-                  <th>Estado</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lockers.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="text-center">
-                      No hay lockers registrados
-                    </td>
-                  </tr>
-                ) : (
-                  lockers.map((locker) => (
-                    <tr key={locker.id}>
-                      <td>{locker.id}</td>
-                      <td>{locker.numero}</td>
-                      <td>{getUbicacion(locker.numero)}</td>
-                      <td>
-                        <span
-                          className={`badge px-3 py-2 ${
-                            locker.estado === "Disponible"
-                              ? "bg-success"
-                              : locker.estado === "Ocupado"
-                              ? "bg-danger"
-                              : "bg-warning text-dark"
-                          }`}
-                        >
-                          {locker.estado}
-                        </span>
-                      </td>
-                      <td className="text-center">
-                        <button
-                          className="btn btn-sm btn-warning me-2"
-                          onClick={() => handleEdit(locker.id)}
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleDelete(locker.id)}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  <FormControl
+    variant="filled"
+    sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+  >
+    <InputLabel sx={{ color: "#aaa" }}>Estado</InputLabel>
+    <Select
+      value={estado}
+      onChange={(e) => setEstado(e.target.value)}
+      sx={{ color: "white" }}
+    >
+      <MenuItem value="disponible">Disponible</MenuItem>
+      <MenuItem value="ocupado">Ocupado</MenuItem>
+      <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
+    </Select>
+  </FormControl>
+  
+  <FormControl
+    variant="filled"
+    sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+  >
+    <InputLabel sx={{ color: "#aaa" }}>Ubicación</InputLabel>
+    <Select
+      value={ubicacionId}
+      onChange={(e) => setUbicacionId(e.target.value)}
+      sx={{ color: "white" }}
+    >
+      {ubicaciones.map((u) => (
+        <MenuItem key={u.id} value={u.id}>
+          {u.pabellon} - {u.piso}
+        </MenuItem>
+      ))}
+    </Select>
+  </FormControl>
+
+  {/* FILTRO ESTADO movido antes del botón */}
+  <FormControl
+    variant="filled"
+    sx={{ minWidth: 200, backgroundColor: "#2a2a2a" }}
+  >
+    <InputLabel sx={{ color: "#aaa" }}>Filtrar por estado</InputLabel>
+    <Select
+      value={filtroEstado}
+      onChange={(e) => setFiltroEstado(e.target.value)}
+      sx={{ color: "white" }}
+    >
+      <MenuItem value="todos">Todos</MenuItem>
+      <MenuItem value="disponible">Disponible</MenuItem>
+      <MenuItem value="ocupado">Ocupado</MenuItem>
+      <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
+    </Select>
+  </FormControl>
+
+  <Button type="submit" variant="contained">
+    {editId ? "Actualizar" : "Agregar"}
+  </Button>
+</Box>
+
+
+          {/* TABLA */}
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ color: "white" }}>Número</TableCell>
+                <TableCell sx={{ color: "white" }}>Estado</TableCell>
+                <TableCell sx={{ color: "white" }}>Ubicación</TableCell>
+                <TableCell sx={{ color: "white" }} align="center">
+                  Acciones
+                </TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {lockersFiltrados.map((locker) => (
+                <TableRow key={locker.id}>
+                  <TableCell sx={{ color: "white" }}>
+                    {locker.numeroLocker}
+                  </TableCell>
+
+                  <TableCell>
+                    <Chip
+                      label={locker.estado}
+                      color={
+                        locker.estado === "disponible"
+                          ? "success"
+                          : locker.estado === "ocupado"
+                          ? "error"
+                          : "warning"
+                      }
+                    />
+                  </TableCell>
+                  <TableCell sx={{ color: "white" }}>
+                    {locker.ubicacion}
+                  </TableCell>
+
+                  <TableCell align="center">
+                    <IconButton
+                      color="warning"
+                      onClick={() => handleEdit(locker)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+
+                    <IconButton
+                      color="error"
+                      onClick={() => handleDelete(locker.id)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+
+              {lockers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} sx={{ color: "white" }} align="center">
+                    No hay lockers
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+         
+    </Box>
+  );
 }

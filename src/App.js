@@ -17,6 +17,7 @@ import MisLockers from "./Pages/User/MisLockers";
 import ReservarLocker from "./Pages/User/ReservarLocker";
 import UbicacionesLockers from "./Pages/User/UbicacionesLockers";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Reservas from "./Pages/Admin/Reservas";
 
 const darkTheme = createTheme({
   palette: {
@@ -30,6 +31,7 @@ const views = {
   lockers: <Lockers />,
   ubicacion: <Ubicacion />,
   reportes: <Reportes />,
+  reservas: <Reservas />
 };
 
 const viewsUser = {

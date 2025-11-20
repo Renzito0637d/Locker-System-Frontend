@@ -1,0 +1,45 @@
+name: Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ deploy ]
+  pull_request:
+    branches: [ deploy ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    name: Build & Test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        # 'npm ci' es más rápido y seguro para entornos de CI que 'npm install'
+        run: npm ci
+
+      - name: Run Tests
+        # Si no tienes tests configurados, puedes comentar o borrar esta línea
+        run: npm test
+
+      - name: Build Project
+        # Esto asegura que el proyecto compila correctamente antes de intentar desplegar
+        run: npm run build
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    name: Deploy to Render
+    
+    if: github.ref == 'refs/heads/deploy' 
+
+    steps:
+      - name: Trigger Render Deploy
+        run: |
+          curl -X POST ${{ secrets.RENDER_API_KEY }}

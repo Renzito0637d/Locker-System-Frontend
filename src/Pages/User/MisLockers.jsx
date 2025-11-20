@@ -13,14 +13,23 @@ import {
   TextField,
   MenuItem,
   CircularProgress,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  Button,
+  Tooltip,
+  IconButton,
+  DialogActions
 } from "@mui/material";
+import LockOpenIcon from '@mui/icons-material/LockOpen'; // Ícono para liberar
 // Asumiendo que estas dependencias están instaladas en tu proyecto:
 import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
-import "dayjs/locale/es"; 
-import { getMisReservas } from "../../services/ReservaService";
+import "dayjs/locale/es";
+import { getMisReservas, deleteReserva } from "../../services/ReservaService";
 
 // Asegúrate de que este archivo se encuentre en src/services/reservaService.js
 
@@ -29,6 +38,7 @@ export default function MisLockers() {
   // --- 1. Estados ---
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedToLiberar, setSelectedToLiberar] = useState(null); // Para el diálogo
 
   // Estados para filtros y orden
   const [sortField, setSortField] = useState("id");
@@ -41,10 +51,11 @@ export default function MisLockers() {
   }, []);
 
   const cargarDatos = async () => {
+    setLoading(true);
     try {
       const data = await getMisReservas();
-      // Solo mostramos las reservas que ya fueron APROBADAS por el admin
-      const aprobadas = Array.isArray(data) 
+      // Solo mostramos las reservas que ya fueron APROBADAS
+      const aprobadas = Array.isArray(data)
         ? data.filter((r) => r.estadoReserva === "APROBADA")
         : [];
       setReservas(aprobadas);
@@ -56,38 +67,50 @@ export default function MisLockers() {
     }
   };
 
-  // --- 3. Lógica de Filtrado y Ordenamiento (useMemo) ---
-  const processedRows = useMemo(() => {
-    // A. Filtrar por rango de fechas
-    const filtered = reservas.filter((row) => {
-      // Si no hay fechas seleccionadas, pasa todo
-      if (!startDate && !endDate) return true;
+  // --- 3. Lógica de Liberación (DELETE) ---
+  const handleLiberarClick = (reserva) => {
+    setSelectedToLiberar(reserva);
+  };
 
+  const handleConfirmLiberar = async () => {
+    if (!selectedToLiberar) return;
+
+    try {
+      // Llamamos al endpoint DELETE. 
+      // Gracias a tu cambio en el Backend, esto pondrá el locker en DISPONIBLE automáticamente.
+      await deleteReserva(selectedToLiberar.id);
+
+      // Actualizamos la tabla quitando la reserva eliminada
+      setReservas((prev) => prev.filter(r => r.id !== selectedToLiberar.id));
+
+      setSelectedToLiberar(null);
+    } catch (error) {
+      console.error("Error liberando locker:", error);
+      alert("Hubo un error al intentar liberar el locker.");
+    }
+  };
+
+  // --- 4. Lógica de Filtrado y Ordenamiento ---
+  const processedRows = useMemo(() => {
+    // A. Filtrar por fecha
+    const filtered = reservas.filter((row) => {
+      if (!startDate && !endDate) return true;
       const inicio = dayjs(row.fechaInicio);
       const fin = dayjs(row.fechaFin);
-
-      // Lógica:
-      // - Si seleccionaste StartDate, la reserva debe iniciar DESPUÉS de esa fecha.
-      // - Si seleccionaste EndDate, la reserva debe terminar ANTES de esa fecha.
       const afterStart = !startDate || inicio.isAfter(startDate) || inicio.isSame(startDate);
       const beforeEnd = !endDate || fin.isBefore(endDate) || fin.isSame(endDate);
-
       return afterStart && beforeEnd;
     });
 
-    // B. Ordenar resultados filtrados
+    // B. Ordenar
     return filtered.sort((a, b) => {
-      if (sortField === "id") {
-        return a.id - b.id;
-      }
+      if (sortField === "id") return a.id - b.id;
       if (sortField === "locker") {
-        // Orden numérico natural para lockers (ej: "10" va después de "2")
         const numA = a.locker?.numeroLocker || "";
         const numB = b.locker?.numeroLocker || "";
         return numA.localeCompare(numB, undefined, { numeric: true });
       }
       if (sortField === "ubicacion") {
-        // Orden alfabético por Pabellón
         const locA = a.locker?.ubicacion?.pabellon || "";
         const locB = b.locker?.ubicacion?.pabellon || "";
         return locA.localeCompare(locB);
@@ -96,14 +119,15 @@ export default function MisLockers() {
     });
   }, [reservas, startDate, endDate, sortField]);
 
-  // Columnas de la tabla
+  // Definición de columnas
   const columns = [
     { id: "id", label: "ID", minWidth: 50 },
     { id: "locker", label: "N° Locker", minWidth: 100 },
     { id: "ubicacion", label: "Ubicación", minWidth: 150 },
-    { id: "fechaInicio", label: "Desde", minWidth: 170 },
-    { id: "fechaFin", label: "Hasta", minWidth: 170 },
+    { id: "fechaInicio", label: "Desde", minWidth: 150 },
+    { id: "fechaFin", label: "Hasta", minWidth: 150 },
     { id: "estado", label: "Estado", minWidth: 100 },
+    { id: "acciones", label: "Acciones", minWidth: 80, align: "center" }, // Nueva columna
   ];
 
   if (loading) {
@@ -120,59 +144,50 @@ export default function MisLockers() {
         Mis Lockers Activos
       </Typography>
 
-      {/* BARRA DE FILTROS Y HERRAMIENTAS */}
+      {/* BARRA DE HERRAMIENTAS */}
       <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
         <Box display="flex" gap={2} flexWrap="wrap" alignItems="center">
-            
-            {/* Selector de Orden */}
-            <TextField
-                select
-                label="Ordenar por"
-                value={sortField}
-                onChange={(e) => setSortField(e.target.value)}
-                sx={{ minWidth: 180 }}
-                size="small"
+          <TextField
+            select
+            label="Ordenar por"
+            value={sortField}
+            onChange={(e) => setSortField(e.target.value)}
+            sx={{ minWidth: 180 }}
+            size="small"
+          >
+            <MenuItem value="id">ID Reserva</MenuItem>
+            <MenuItem value="locker">Número Locker</MenuItem>
+            <MenuItem value="ubicacion">Ubicación</MenuItem>
+          </TextField>
+
+          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+            <DateTimePicker
+              label="Inicio desde"
+              value={startDate}
+              onChange={(newValue) => setStartDate(newValue)}
+              slotProps={{ textField: { size: 'small', sx: { minWidth: 200 } } }}
+            />
+            <DateTimePicker
+              label="Fin hasta"
+              value={endDate}
+              onChange={(newValue) => setEndDate(newValue)}
+              slotProps={{ textField: { size: 'small', sx: { minWidth: 200 } } }}
+            />
+          </LocalizationProvider>
+
+          {(startDate || endDate) && (
+            <Typography
+              variant="body2"
+              sx={{ cursor: 'pointer', color: 'primary.main', textDecoration: 'underline', fontWeight: 'bold' }}
+              onClick={() => { setStartDate(null); setEndDate(null); }}
             >
-                <MenuItem value="id">ID Reserva</MenuItem>
-                <MenuItem value="locker">Número Locker</MenuItem>
-                <MenuItem value="ubicacion">Ubicación</MenuItem>
-            </TextField>
-
-            {/* Filtros de Fecha */}
-            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
-                <DateTimePicker
-                    label="Inicio desde"
-                    value={startDate}
-                    onChange={(newValue) => setStartDate(newValue)}
-                    slotProps={{ textField: { size: 'small', sx: { minWidth: 220 } } }}
-                />
-                <DateTimePicker
-                    label="Fin hasta"
-                    value={endDate}
-                    onChange={(newValue) => setEndDate(newValue)}
-                    slotProps={{ textField: { size: 'small', sx: { minWidth: 220 } } }}
-                />
-            </LocalizationProvider>
-
-            {/* Botón limpiar */}
-            {(startDate || endDate) && (
-                <Typography 
-                    variant="body2" 
-                    sx={{ 
-                        cursor: 'pointer', 
-                        color: 'primary.main', 
-                        textDecoration: 'underline',
-                        fontWeight: 'bold'
-                    }}
-                    onClick={() => { setStartDate(null); setEndDate(null); }}
-                >
-                    Limpiar fechas
-                </Typography>
-            )}
+              Limpiar
+            </Typography>
+          )}
         </Box>
       </Paper>
 
-      {/* TABLA DE DATOS */}
+      {/* TABLA */}
       <TableContainer component={Paper} sx={{ maxHeight: 500, boxShadow: 3 }}>
         <Table stickyHeader aria-label="tabla mis lockers">
           <TableHead>
@@ -180,11 +195,12 @@ export default function MisLockers() {
               {columns.map((column) => (
                 <TableCell
                   key={column.id}
+                  align={column.align || "left"}
                   sx={{
                     minWidth: column.minWidth,
                     fontWeight: "bold",
-                    backgroundColor: "#212121", // Fondo oscuro para cabecera
-                    color: "#fff",              // Texto blanco
+                    backgroundColor: "#212121",
+                    color: "#fff",
                     borderBottom: "1px solid #424242"
                   }}
                 >
@@ -196,7 +212,6 @@ export default function MisLockers() {
           <TableBody>
             {processedRows.length > 0 ? (
               processedRows.map((row) => {
-                // Formateo de Ubicación (ej: A - Piso 2)
                 const pabellon = row.locker?.ubicacion?.pabellon || "?";
                 const piso = row.locker?.ubicacion?.piso || "?";
                 const ubicacionStr = `Pabellón ${pabellon} - Piso ${piso}`;
@@ -205,22 +220,26 @@ export default function MisLockers() {
                   <TableRow hover tabIndex={-1} key={row.id}>
                     <TableCell>{row.id}</TableCell>
                     <TableCell sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-                        {row.locker?.numeroLocker}
+                      {row.locker?.numeroLocker}
                     </TableCell>
                     <TableCell>{ubicacionStr}</TableCell>
+                    <TableCell>{dayjs(row.fechaInicio).format("DD/MM/YYYY HH:mm")}</TableCell>
+                    <TableCell>{dayjs(row.fechaFin).format("DD/MM/YYYY HH:mm")}</TableCell>
                     <TableCell>
-                        {dayjs(row.fechaInicio).format("DD/MM/YYYY HH:mm")}
+                      <Chip label={row.estadoReserva} color="success" size="small" variant="filled" />
                     </TableCell>
-                    <TableCell>
-                        {dayjs(row.fechaFin).format("DD/MM/YYYY HH:mm")}
-                    </TableCell>
-                    <TableCell>
-                        <Chip 
-                            label={row.estadoReserva} 
-                            color="success" 
-                            size="small" 
-                            variant="filled" 
-                        />
+
+                    {/* COLUMNA DE ACCIONES */}
+                    <TableCell align="center">
+                      <Tooltip title="Liberar y devolver locker">
+                        <IconButton
+                          color="error"
+                          onClick={() => handleLiberarClick(row)}
+                          sx={{ border: '1px solid', borderColor: 'error.main' }}
+                        >
+                          <LockOpenIcon />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 );
@@ -229,7 +248,7 @@ export default function MisLockers() {
               <TableRow>
                 <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
                   <Typography variant="body1" color="text.secondary">
-                    No tienes lockers aprobados que coincidan con los filtros.
+                    No tienes lockers activos para mostrar.
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -237,6 +256,37 @@ export default function MisLockers() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* DIALOGO DE CONFIRMACIÓN */}
+      <Dialog
+        open={Boolean(selectedToLiberar)}
+        onClose={() => setSelectedToLiberar(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Confirmar Liberación</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Ya terminaste de usar el <strong>Locker {selectedToLiberar?.locker?.numeroLocker}</strong>?
+            <br /><br />
+            Al confirmar, el locker quedará <strong>disponible</strong> para otros estudiantes y tu reserva se dará por finalizada.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectedToLiberar(null)} color="inherit">
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmLiberar}
+            variant="contained"
+            color="error"
+            autoFocus
+            startIcon={<LockOpenIcon />}
+          >
+            Sí, Liberar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

@@ -31,8 +31,8 @@ import { createReserva, deleteReserva, getLockers, getMisReservas } from "../../
 const ReservarLocker = () => {
     // --- ESTADOS DE DATOS ---
     const [userId, setUserId] = useState(null);
-    const [lockers, setLockers] = useState([]); // Todos los lockers traídos de BD
-    const [reservas, setReservas] = useState([]); // Reservas del usuario
+    const [lockers, setLockers] = useState([]);
+    const [reservas, setReservas] = useState([]);
 
     // --- ESTADOS DEL FORMULARIO ---
     const [pabellon, setPabellon] = useState("");
@@ -45,22 +45,19 @@ const ReservarLocker = () => {
     // --- ESTADOS DE UI ---
     const [loading, setLoading] = useState(true);
     const [openGuide, setOpenGuide] = useState(false);
-    const [selectedToCancel, setSelectedToCancel] = useState(null); // ID reserva a cancelar
+    const [selectedToCancel, setSelectedToCancel] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
 
-    // 1. CARGA INICIAL (Usuario, Lockers y Reservas)
+    // 1. CARGA INICIAL
     useEffect(() => {
         async function loadData() {
             try {
-                // A. Obtener usuario actual
                 const user = await getMe();
                 setUserId(user.id);
 
-                // B. Obtener Lockers
                 const lockersData = await getLockers();
                 setLockers(lockersData);
 
-                // C. Obtener Reservas
                 const reservasData = await getMisReservas();
                 setReservas(reservasData);
 
@@ -74,23 +71,54 @@ const ReservarLocker = () => {
         loadData();
     }, []);
 
-    // Creamos una variable segura. Si lockers es null o no es array, usamos []
-  const listaLockers = Array.isArray(lockers) ? lockers : [];
+    // ---------------------------------------------------------
+    // CORRECCIÓN: NORMALIZACIÓN DE DATOS
+    // ---------------------------------------------------------
+    const listaLockers = Array.isArray(lockers) ? lockers : [];
 
-  // Usamos 'listaLockers' en lugar de 'lockers' para los cálculos:
-  const pabellonesUnicos = [...new Set(listaLockers.map(l => l.ubicacion?.pabellon).filter(Boolean))].sort();
-  
-  const pisosDisponibles = [...new Set(
-    listaLockers
-      .filter(l => l.ubicacion?.pabellon === pabellon)
-      .map(l => l.ubicacion?.piso)
-  )].sort();
+    // Esta función maneja si el backend envía objeto {pabellon: 'A'} o string "A - 1"
+    const lockersNormalizados = listaLockers.map(l => {
+        let _pabellon = "?";
+        let _piso = "?";
 
-  const lockersFiltrados = listaLockers.filter(l => 
-    l.ubicacion?.pabellon === pabellon && 
-    l.ubicacion?.piso === piso &&
-    l.estado === "DISPONIBLE" 
-  );
+        if (l.ubicacion) {
+            if (typeof l.ubicacion === 'object') {
+                // Caso ideal: es un objeto
+                _pabellon = l.ubicacion.pabellon;
+                _piso = l.ubicacion.piso;
+            } else if (typeof l.ubicacion === 'string') {
+                // Caso actual: es un string "B - 67"
+                // Separamos por el guión
+                const parts = l.ubicacion.split('-');
+                if (parts.length >= 2) {
+                    _pabellon = parts[0].trim(); // Quita espacios extra
+                    _piso = parts[1].trim();
+                } else {
+                    // Fallback si el string no tiene guión
+                    _pabellon = l.ubicacion;
+                }
+            }
+        }
+        // Retornamos el locker con campos auxiliares limpios
+        return { ...l, _pabellon, _piso };
+    });
+
+    // Usamos los lockers normalizados para los filtros
+    const pabellonesUnicos = [...new Set(lockersNormalizados.map(l => l._pabellon).filter(p => p !== "?"))].sort();
+
+    const pisosDisponibles = [...new Set(
+        lockersNormalizados
+            .filter(l => l._pabellon === pabellon)
+            .map(l => l._piso)
+    )].sort();
+
+    const lockersFiltrados = lockersNormalizados.filter(l =>
+        l._pabellon === pabellon &&
+        l._piso === piso &&
+        l.estado === "DISPONIBLE"
+    );
+
+    // ---------------------------------------------------------
 
     // 3. CREAR RESERVA
     const handleSubmit = async (e) => {
@@ -102,11 +130,7 @@ const ReservarLocker = () => {
             return;
         }
 
-        // Combinar fecha y hora para LocalDateTime
-        // Ejemplo Java espera: "2023-10-20T14:30:00"
         const fechaInicio = fecha.hour(hora.hour()).minute(hora.minute()).second(0);
-
-        // Definimos fecha fin (ejemplo: 2 horas después, o fin del día, según tu lógica)
         const fechaFin = fechaInicio.add(2, 'hour');
 
         const payload = {
@@ -119,11 +143,15 @@ const ReservarLocker = () => {
 
         try {
             await createReserva(payload);
-            alert("¡Reserva exitosa!");
-            // Recargar reservas
+            alert("¡Solicitud de reserva enviada con éxito!");
+
             const nuevasReservas = await getMisReservas();
             setReservas(nuevasReservas);
-            // Resetear form parcial
+
+            // Actualizar lockers (para que el reservado ya no salga disponible)
+            const nuevosLockers = await getLockers();
+            setLockers(nuevosLockers);
+
             setSelectedLockerId("");
         } catch (error) {
             console.error(error);
@@ -137,6 +165,11 @@ const ReservarLocker = () => {
         try {
             await deleteReserva(selectedToCancel);
             setReservas(reservas.filter(r => r.id !== selectedToCancel));
+
+            // Actualizar lockers disponibles
+            const nuevosLockers = await getLockers();
+            setLockers(nuevosLockers);
+
             setSelectedToCancel(null);
         } catch (error) {
             console.error(error);
@@ -144,9 +177,20 @@ const ReservarLocker = () => {
         }
     };
 
+    const getStatusColor = (status) => {
+        const s = status ? status.toUpperCase() : "";
+        switch (s) {
+            case "APROBADA": return "success";
+            case "PENDIENTE": return "warning";
+            case "RECHAZADA": return "error";
+            case "CANCELADA": return "default";
+            case "FINALIZADA": return "info";
+            default: return "default";
+        }
+    };
+
     if (loading) return <Box display="flex" justifyContent="center" mt={5}><CircularProgress /></Box>;
 
-    // Helper para mostrar info en el modal de cancelar
     const reservaSeleccionada = reservas.find(r => r.id === selectedToCancel);
 
     return (
@@ -160,7 +204,6 @@ const ReservarLocker = () => {
             {/* FORMULARIO */}
             <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 
-                {/* 1. SELECT PABELLÓN */}
                 <FormControl fullWidth required>
                     <InputLabel>Pabellón</InputLabel>
                     <Select
@@ -168,8 +211,8 @@ const ReservarLocker = () => {
                         label="Pabellón"
                         onChange={(e) => {
                             setPabellon(e.target.value);
-                            setPiso(""); // Reset siguiente
-                            setSelectedLockerId(""); // Reset siguiente
+                            setPiso("");
+                            setSelectedLockerId("");
                         }}
                     >
                         {pabellonesUnicos.map((p) => (
@@ -178,7 +221,6 @@ const ReservarLocker = () => {
                     </Select>
                 </FormControl>
 
-                {/* 2. SELECT PISO (Solo aparece si hay pabellón) */}
                 <FormControl fullWidth required disabled={!pabellon}>
                     <InputLabel>Piso</InputLabel>
                     <Select
@@ -195,7 +237,6 @@ const ReservarLocker = () => {
                     </Select>
                 </FormControl>
 
-                {/* 3. SELECT LOCKER (Número) */}
                 <FormControl fullWidth required disabled={!piso}>
                     <InputLabel>Número de Locker</InputLabel>
                     <Select
@@ -235,12 +276,10 @@ const ReservarLocker = () => {
                     Ver distribución de lockers
                 </Button>
 
-                {/* MODAL GUIA (Tu código original) */}
                 <Dialog open={openGuide} onClose={() => setOpenGuide(false)} maxWidth="md" fullWidth >
                     <DialogTitle>Distribución de lockers</DialogTitle>
                     <DialogContent dividers>
                         <Box sx={{ display: "flex", justifyContent: "center" }}>
-                            {/* Placeholder para la imagen */}
                             <img src="https://via.placeholder.com/600x300?text=Mapa+Lockers" alt="Mapa" style={{ maxWidth: "100%", borderRadius: 8 }} />
                         </Box>
                     </DialogContent>
@@ -257,7 +296,7 @@ const ReservarLocker = () => {
             {/* LISTA DE RESERVAS */}
             <Box sx={{ mt: 5 }}>
                 <Typography variant="h6" gutterBottom>
-                    Mis Lockers Reservados
+                    Mis Solicitudes de Reserva
                 </Typography>
 
                 {reservas.length === 0 ? (
@@ -268,12 +307,18 @@ const ReservarLocker = () => {
                             <Card key={reserva.id} sx={{ borderRadius: 2, boxShadow: 3 }}>
                                 <CardContent>
                                     <Typography variant="h6" color="primary">
-                                        {/* Accedemos a los datos anidados del objeto ReservaResponse */}
                                         Locker {reserva.locker?.numeroLocker || "?"}
                                     </Typography>
+
+                                    {/* Manejo defensivo para mostrar ubicación en las tarjetas también */}
                                     <Typography variant="body2" fontWeight="bold">
-                                        {reserva.locker?.ubicacion?.pabellon} - Piso {reserva.locker?.ubicacion?.piso}
+                                        {/* Si viene como objeto DTO (ReservaResponse) */}
+                                        {reserva.locker?.ubicacion?.pabellon
+                                            ? `${reserva.locker.ubicacion.pabellon} - Piso ${reserva.locker.ubicacion.piso}`
+                                            : "Ubicación pendiente"
+                                        }
                                     </Typography>
+
                                     <Typography variant="body2" color="text.secondary" mt={1}>
                                         📅 {dayjs(reserva.fechaInicio).format("DD/MM/YYYY")}
                                         <br />
@@ -281,14 +326,13 @@ const ReservarLocker = () => {
                                     </Typography>
                                     <Chip
                                         label={reserva.estadoReserva || "ACTIVA"}
-                                        color={reserva.estadoReserva === "CANCELADA" ? "error" : "success"}
+                                        color={getStatusColor(reserva.estadoReserva)}
                                         size="small"
                                         sx={{ mt: 1 }}
                                     />
                                 </CardContent>
                                 <CardActions>
-                                    {/* Solo permitir cancelar si no está cancelada ya */}
-                                    {reserva.estadoReserva !== "CANCELADA" && (
+                                    {reserva.estadoReserva !== "CANCELADA" && reserva.estadoReserva !== "RECHAZADA" && (
                                         <Button size="small" color="error" onClick={() => setSelectedToCancel(reserva.id)}>
                                             Cancelar
                                         </Button>
@@ -300,7 +344,6 @@ const ReservarLocker = () => {
                 )}
             </Box>
 
-            {/* DIALOGO DE CONFIRMACIÓN */}
             <Dialog open={selectedToCancel !== null} onClose={() => setSelectedToCancel(null)} maxWidth="xs" fullWidth>
                 <DialogTitle>Confirmar cancelación</DialogTitle>
                 <DialogContent>

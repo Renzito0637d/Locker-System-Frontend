@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Paper,
@@ -12,6 +12,7 @@ import {
   ListItemText,
   Chip,
   Container,
+  CircularProgress
 } from "@mui/material";
 
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
@@ -21,6 +22,11 @@ import LockRoundedIcon from "@mui/icons-material/LockRounded";
 import BuildRoundedIcon from "@mui/icons-material/BuildRounded";
 import QueryStatsRoundedIcon from "@mui/icons-material/QueryStatsRounded";
 import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
+import { getAllUsers } from "../../services/UserService";
+import { getAllReportes } from "../../services/ReporteService";
+import { getLockers } from "../../services/ReservaService";
+
+// Importamos los servicios que acabamos de regenerar
 
 // Tarjeta de KPI reutilizable
 function StatCard({ icon, label, value, color = "primary" }) {
@@ -58,31 +64,82 @@ function StatCard({ icon, label, value, color = "primary" }) {
   );
 }
 
-/**
- * ResumenSistema
- * Props:
- *  - usuarios, lockersTotal, lockersLibres, lockersOcupados, lockersMantenimiento
- *  - reportes: [{ id, titulo, descripcion, lugar, locker, estado }]
- */
-export default function Dashboard({
-  // Datos estaticos de ejemplo
-  usuarios = 134,
-  lockersTotal = 200,
-  lockersLibres = 120,
-  lockersOcupados = 70,
-  lockersMantenimiento = 10,
-  reportes = [
-    { id: 1, titulo: "Locker #A-12 atascado", estado: "pendiente" },
-    { id: 2, titulo: "Puerta #B-03 no cierra", estado: "en revisión" },
-  ],
-}) {
-  const ocupacion =
-    lockersTotal > 0 ? (lockersOcupados / lockersTotal) * 100 : 0;
-  const disponibilidad =
-    lockersTotal > 0 ? (lockersLibres / lockersTotal) * 100 : 0;
+export default function Dashboard() {
+  const [stats, setStats] = useState({
+    usuarios: 0,
+    lockersTotal: 0,
+    lockersLibres: 0,
+    lockersOcupados: 0,
+    lockersMantenimiento: 0,
+    reportes: []
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [usersData, lockersData, reportesData] = await Promise.all([
+          getAllUsers(),
+          getLockers(),
+          getAllReportes()
+        ]);
+
+        const countUsers = Array.isArray(usersData) ? usersData.length : 0;
+
+        const lockers = Array.isArray(lockersData) ? lockersData : [];
+        const total = lockers.length;
+        const libres = lockers.filter(l => l.estado === "DISPONIBLE").length;
+        const ocupados = lockers.filter(l => l.estado === "OCUPADO").length;
+        const mantenimiento = total - (libres + ocupados);
+
+        const reportsRaw = Array.isArray(reportesData) ? reportesData : [];
+        const reportsRecent = reportsRaw
+          .sort((a, b) => new Date(b.fechaReporte) - new Date(a.fechaReporte))
+          .slice(0, 5);
+
+        setStats({
+          usuarios: countUsers,
+          lockersTotal: total,
+          lockersLibres: libres,
+          lockersOcupados: ocupados,
+          lockersMantenimiento: mantenimiento,
+          reportes: reportsRecent
+        });
+
+      } catch (error) {
+        console.error("Error cargando dashboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" mt={5}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  const { usuarios, lockersTotal, lockersLibres, lockersOcupados, lockersMantenimiento, reportes } = stats;
+  const ocupacion = lockersTotal > 0 ? (lockersOcupados / lockersTotal) * 100 : 0;
+  const disponibilidad = lockersTotal > 0 ? (lockersLibres / lockersTotal) * 100 : 0;
+
+  const getReportColor = (estado) => {
+    if (estado === "SOLUCIONADO") return "success";
+    if (estado === "REVISADO") return "info";
+    return "warning";
+  };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
+        Panel de Control
+      </Typography>
+
       <Box
         sx={{
           display: "grid",
@@ -123,14 +180,13 @@ export default function Dashboard({
         />
         <StatCard
           icon={<BuildRoundedIcon />}
-          label="En mantenimiento"
+          label="Mantenimiento"
           value={lockersMantenimiento}
           color="error"
         />
       </Box>
 
-      {/* Bloque adicional: tasa de ocupación y disponibilidad */}
-      <Paper elevation={2} sx={{ p: 2 }}>
+      <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={2}
@@ -178,35 +234,45 @@ export default function Dashboard({
         </Stack>
       </Paper>
 
-      {/* Bloque : últimos reportes */}
       <Paper elevation={2} sx={{ p: 2 }}>
         <Typography variant="h6" sx={{ mb: 1 }}>
-          Últimos reportes
+          Últimos reportes registrados
         </Typography>
         <Divider sx={{ mb: 1 }} />
+
         {reportes.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ p: 1 }}>
             No hay reportes recientes.
           </Typography>
         ) : (
           <List dense>
             {reportes.map((r) => (
-              <ListItem key={r.id} disableGutters>
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  <ReportProblemRoundedIcon color="warning" />
+              <ListItem key={r.id} disableGutters divider>
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <ReportProblemRoundedIcon color="error" />
                 </ListItemIcon>
+
                 <ListItemText
-                  primary={r.titulo}
-                  secondary={
-                    <Chip
-                      label={r.estado}
-                      size="small"
-                      sx={{ mt: 0.5 }}
-                      color={r.estado === "pendiente" ? "warning" : "info"}
-                    />
+                  primary={
+                    <Typography variant="subtitle2" fontWeight="bold">
+                      {r.tipoReporte} - Locker {r.locker?.numeroLocker || "?"}
+                    </Typography>
                   }
-                  secondaryTypographyProps={{ component: "span" }}
+                  secondary={
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      {r.descripcion?.substring(0, 50)}...
+                    </Typography>
+                  }
                 />
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                  <Chip
+                    label={r.estado}
+                    size="small"
+                    color={getReportColor(r.estado)}
+                    variant={r.estado === "PENDIENTE" ? "filled" : "outlined"}
+                  />
+                </Box>
               </ListItem>
             ))}
           </List>

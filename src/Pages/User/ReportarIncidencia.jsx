@@ -11,337 +11,367 @@ import {
   CardActions,
   Divider,
   IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Tooltip,
+  Chip,
+  Alert
 } from "@mui/material";
-import { motion } from "framer-motion";
-import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import dayjs from "dayjs";
 
-const bloques = ["A", "B", "C", "D", "E", "F"];
-const numeros = Array.from({ length: 20 }, (_, i) =>
-  (i + 1).toString().padStart(2, "0")
-);
+// Importamos servicios
+
+import { getLockers } from "../../services/ReservaService";
+import { getMe } from "../../lib/auth";
+import { getMisReportes, createReporte, deleteReporte } from "../../services/ReporteService";
 
 export default function ReportarIncidencia() {
-  const [bloqueSeleccionado, setBloqueSeleccionado] = useState(null);
-  const [numeroSeleccionado, setNumeroSeleccionado] = useState(null);
-  const [selectedPart, setSelectedPart] = useState(null);
-  const [description, setDescription] = useState("");
-  const [editId, setEditId] = useState(null);
+  // --- ESTADOS DE DATOS ---
+  const [userId, setUserId] = useState(null);
+  const [lockers, setLockers] = useState([]);
+  const [reportes, setReportes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Inicializar incidencias desde localStorage (lazy initializer)
-  const [incidencias, setIncidencias] = useState(() => {
+  // --- ESTADOS DEL FORMULARIO ---
+  const [pabellon, setPabellon] = useState("");
+  const [piso, setPiso] = useState("");
+  const [selectedLockerId, setSelectedLockerId] = useState("");
+  const [tipoReporte, setTipoReporte] = useState(""); // "Puerta", "Cerradura", etc.
+  const [descripcion, setDescripcion] = useState("");
+
+  // 1. CARGA INICIAL
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
     try {
-      const saved = localStorage.getItem("incidencias");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Error leyendo localStorage:", e);
-      return [];
+      const user = await getMe();
+      setUserId(user.id);
+
+      const dataLockers = await getLockers();
+      setLockers(dataLockers);
+
+      const dataReportes = await getMisReportes();
+      setReportes(dataReportes);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // --- LÓGICA DE FILTROS (Igual que en Reservar) ---
+  const listaLockers = Array.isArray(lockers) ? lockers : [];
+  
+  const lockersNormalizados = listaLockers.map(l => {
+    let _pabellon = "?";
+    let _piso = "?";
+    if (l.ubicacion) {
+        if (typeof l.ubicacion === 'object') {
+            _pabellon = l.ubicacion.pabellon || "?";
+            _piso = l.ubicacion.piso || "?";
+        } else if (typeof l.ubicacion === 'string') {
+            const parts = l.ubicacion.split('-'); 
+            if (parts.length >= 2) {
+                _pabellon = parts[0].trim();
+                _piso = parts[1].trim();
+            } else {
+                _pabellon = l.ubicacion; 
+            }
+        }
+    }
+    return { ...l, _pabellon, _piso };
   });
 
-  // Guardar incidencias en localStorage cuando cambian
-  useEffect(() => {
-    try {
-      localStorage.setItem("incidencias", JSON.stringify(incidencias));
-    } catch (e) {
-      console.error("Error guardando en localStorage:", e);
-    }
-  }, [incidencias]);
+  const pabellonesUnicos = [...new Set(lockersNormalizados.map(l => l._pabellon).filter(p => p !== "?"))].sort();
+  
+  const pisosDisponibles = [...new Set(
+    lockersNormalizados.filter(l => l._pabellon === pabellon).map(l => l._piso)
+  )].sort();
 
-  // Limpiar formulario
-  const resetForm = () => {
-    setBloqueSeleccionado(null);
-    setNumeroSeleccionado(null);
-    setSelectedPart(null);
-    setDescription("");
-    setEditId(null);
-  };
+  const lockersFiltrados = lockersNormalizados.filter(l => 
+    l._pabellon === pabellon && l._piso === piso
+  );
 
-  // Enviar/Guardar reporte (crear o actualizar)
-  const handleEnviarReporte = () => {
-    if (!bloqueSeleccionado || !numeroSeleccionado || !selectedPart || !description) {
-      alert("Por favor completa todos los campos antes de enviar el reporte.");
+  // --- MANEJO DE ENVÍO ---
+  const handleEnviarReporte = async () => {
+    if (!selectedLockerId || !tipoReporte || !descripcion) {
+      alert("Por favor completa todos los campos: Locker, Parte dañada y Descripción.");
       return;
     }
 
-    if (editId !== null) {
-      // Actualizar incidencia existente
-      setIncidencias((prev) =>
-        prev.map((inc) =>
-          inc.id === editId
-            ? {
-              ...inc,
-              locker: `${bloqueSeleccionado}-${numeroSeleccionado}`,
-              part: selectedPart,
-              description,
-              date: new Date().toLocaleString(),
-            }
-            : inc
-        )
-      );
-      resetForm();
-      return;
-    }
-
-    // Crear nueva incidencia
-    const nuevaIncidencia = {
-      id: Date.now(),
-      locker: `${bloqueSeleccionado}-${numeroSeleccionado}`,
-      part: selectedPart,
-      description,
-      date: new Date().toLocaleString(),
+    const payload = {
+        descripcion: descripcion,
+        tipoReporte: tipoReporte,
+        userId: userId,
+        lockerId: selectedLockerId
     };
 
-    setIncidencias((prev) => [nuevaIncidencia, ...prev]);
-    resetForm();
+    try {
+        await createReporte(payload);
+        alert("Reporte enviado con éxito.");
+        
+        // Resetear form
+        setDescripcion("");
+        setTipoReporte("");
+        setSelectedLockerId("");
+        setPabellon("");
+        setPiso("");
+
+        // Recargar lista
+        const nuevosReportes = await getMisReportes();
+        setReportes(nuevosReportes);
+
+    } catch (error) {
+        console.error("Error enviando reporte:", error);
+        alert("Hubo un error al enviar el reporte.");
+    }
   };
 
-  // Eliminar incidencia
-  const handleDelete = (id) => {
-    const ok = window.confirm("¿Eliminar esta incidencia? Esta acción no se puede deshacer.");
-    if (!ok) return;
-    setIncidencias((prev) => prev.filter((inc) => inc.id !== id));
-    // si estamos editando la misma incidencia, limpiar form
-    if (editId === id) resetForm();
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Eliminar este reporte?")) return;
+    try {
+        await deleteReporte(id);
+        setReportes(reportes.filter(r => r.id !== id));
+    } catch (error) {
+        console.error(error);
+        alert("Error al eliminar.");
+    }
   };
 
-  // Editar incidencia (cargar en formulario)
-  const handleEdit = (id) => {
-    const inc = incidencias.find((i) => i.id === id);
-    if (!inc) return;
-    const [bloque, numero] = inc.locker.split("-");
-    setBloqueSeleccionado(bloque || null);
-    setNumeroSeleccionado(numero || null);
-    setSelectedPart(inc.part || null);
-    setDescription(inc.description || "");
-    setEditId(inc.id);
-    // scroll opcional al form (si quieres)
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  // Borrar todas (opcional)
-  const handleClearAll = () => {
-    const ok = window.confirm("¿Borrar todas las incidencias guardadas?");
-    if (!ok) return;
-    setIncidencias([]);
-    resetForm();
-  };
+  if (loading) return <Box display="flex" justifyContent="center" mt={5}><CircularProgress /></Box>;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" gutterBottom>
-        Reportar Incidencia en Locker
+    <Box sx={{ p: 3, margin: "0 auto" }}>
+      <Typography variant="h4" gutterBottom fontWeight="bold">
+        Reportar Incidencia
+      </Typography>
+      <Typography variant="body1" color="text.secondary" paragraph>
+        Selecciona el locker y la parte afectada en la imagen para generar un reporte.
       </Typography>
 
-      {/* Selección de bloque */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Selecciona el bloque:
-        </Typography>
-        <Grid container spacing={1}>
-          {bloques.map((bloque) => (
-            <Grid item key={bloque}>
-              <Button
-                variant={bloqueSeleccionado === bloque ? "contained" : "outlined"}
-                color="primary"
-                onClick={() => setBloqueSeleccionado(bloque)}
-              >
-                {bloque}
-              </Button>
-            </Grid>
-          ))}
+      <Grid container spacing={4}>
+        {/* COLUMNA IZQUIERDA: FORMULARIO */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3, mb: 3 }} elevation={3}>
+            <Typography variant="h6" gutterBottom>1. Ubicar Locker</Typography>
+            
+            <Box display="flex" gap={2} mb={2}>
+                <FormControl fullWidth size="small">
+                    <InputLabel>Pabellón</InputLabel>
+                    <Select value={pabellon} label="Pabellón" onChange={(e) => { setPabellon(e.target.value); setPiso(""); setSelectedLockerId(""); }}>
+                        {pabellonesUnicos.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+                    </Select>
+                </FormControl>
+                <FormControl fullWidth size="small" disabled={!pabellon}>
+                    <InputLabel>Piso</InputLabel>
+                    <Select value={piso} label="Piso" onChange={(e) => { setPiso(e.target.value); setSelectedLockerId(""); }}>
+                        {pisosDisponibles.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+                    </Select>
+                </FormControl>
+            </Box>
+
+            <FormControl fullWidth sx={{ mb: 3 }} disabled={!piso}>
+                <InputLabel>Número de Locker</InputLabel>
+                <Select value={selectedLockerId} label="Número de Locker" onChange={(e) => setSelectedLockerId(e.target.value)}>
+                    {lockersFiltrados.map((l) => (
+                        <MenuItem key={l.id} value={l.id}>
+                            Locker {l.numeroLocker} ({l.estado})
+                        </MenuItem>
+                    ))}
+                </Select>
+            </FormControl>
+
+            <Typography variant="h6" gutterBottom>2. Detalle del Problema</Typography>
+            
+            <TextField
+                fullWidth
+                label="Tipo de daño (Selecciona en la imagen)"
+                value={tipoReporte}
+                InputProps={{ readOnly: true }}
+                placeholder="Haz click en la imagen de la derecha ->"
+                variant="filled"
+                sx={{ mb: 2, cursor: 'pointer' }}
+                onClick={() => alert("Por favor haz click en los círculos de colores sobre la imagen del locker.")}
+            />
+
+            <TextField
+                fullWidth
+                label="Descripción detallada"
+                multiline
+                rows={3}
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                sx={{ mb: 3 }}
+                placeholder="Ej: La puerta no cierra bien..."
+            />
+
+            <Button 
+                variant="contained" 
+                color="error" 
+                fullWidth 
+                size="large"
+                startIcon={<ReportProblemIcon />}
+                onClick={handleEnviarReporte}
+                disabled={!selectedLockerId || !tipoReporte || !descripcion}
+            >
+                Enviar Reporte
+            </Button>
+          </Paper>
         </Grid>
-      </Paper>
 
-      {/* Selección de número */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="subtitle1" gutterBottom>
-          Selecciona el número:
-        </Typography>
-        <Grid container spacing={1}>
-          {numeros.map((num) => (
-            <Grid item key={num}>
-              <Button
-                variant={numeroSeleccionado === num ? "contained" : "outlined"}
-                color="secondary"
-                onClick={() => setNumeroSeleccionado(num)}
-              >
-                {num}
-              </Button>
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
+        {/* COLUMNA DERECHA: IMAGEN INTERACTIVA */}
+        <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }} elevation={3}>
+                <Typography variant="h6" gutterBottom>Selecciona la parte dañada</Typography>
+                <Box
+                    sx={{
+                        position: "relative",
+                        display: "inline-block",
+                        mt: 2,
+                        border: '1px solid #444',
+                        borderRadius: 2,
+                        overflow: 'hidden'
+                    }}
+                >
+                    {/* IMAGEN LOCKER */}
+                    <img
+                        src="https://static.vecteezy.com/system/resources/previews/037/844/466/non_2x/locker-vecto-icon-vector.jpg"
+                        alt="Locker"
+                        style={{ width: "220px", display: "block" }}
+                        onError={(e) => { e.target.src = "https://via.placeholder.com/220x400.png?text=Imagen+Locker"; }}
+                    />
 
-      {/* Imagen interactiva */}
-      <Box
-        sx={{
-          position: "relative",
-          display: "flex",
-          justifyContent: "center",
-          mb: 2,
-        }}
-      >
-        <img
-          src="https://static.vecteezy.com/system/resources/previews/037/844/466/non_2x/locker-vecto-icon-vector.jpg"
-          alt="Locker"
-          style={{ width: "200px", borderRadius: "8px" }}
-          onError={(e) => {
-            e.target.src = "https://via.placeholder.com/200x400.png?text=Locker";
-          }}
-        />
+                    {/* PUNTO 1: PUERTA (Azul) */}
+                    <Tooltip title="Puerta" placement="right">
+                        <Box
+                            onClick={() => setTipoReporte("Puerta")}
+                            sx={{
+                                position: "absolute",
+                                top: "40%", left: "50%",
+                                width: 20, height: 20,
+                                bgcolor: tipoReporte === "Puerta" ? "white" : "#1976d2",
+                                border: "3px solid #1976d2",
+                                borderRadius: "50%",
+                                cursor: "pointer",
+                                transform: "translate(-50%, -50%)",
+                                transition: "all 0.2s",
+                                boxShadow: tipoReporte === "Puerta" ? "0 0 10px #1976d2" : "none",
+                                '&:hover': { transform: "translate(-50%, -50%) scale(1.3)" }
+                            }}
+                        />
+                    </Tooltip>
 
-        {/* Partes seleccionables */}
-        <motion.div
-          whileHover={{ scale: 1.2 }}
-          style={{
-            position: "absolute",
-            top: "40%",
-            left: "51%",
-            background: "#1976d2",
-            borderRadius: "50%",
-            width: "15px",
-            height: "15px",
-            cursor: "pointer",
-          }}
-          title="Puerta"
-          onClick={() => setSelectedPart("Puerta")}
-        />
-        <motion.div
-          whileHover={{ scale: 1.2 }}
-          style={{
-            position: "absolute",
-            bottom: "50.7%",
-            left: "48.7%",
-            background: "#15ff00ff",
-            borderRadius: "50%",
-            width: "15px",
-            height: "15px",
-            cursor: "pointer",
-          }}
-          title="Cerradura"
-          onClick={() => setSelectedPart("Cerradura")}
-        />
-        <motion.div
-          whileHover={{ scale: 1.2 }}
-          style={{
-            position: "absolute",
-            top: "28%",
-            right: "52.5%",
-            background: "#e53935",
-            borderRadius: "50%",
-            width: "15px",
-            height: "15px",
-            cursor: "pointer",
-          }}
-          title="Bisagra"
-          onClick={() => setSelectedPart("Bisagra")}
-        />
-      </Box>
+                    {/* PUNTO 2: CERRADURA (Verde) */}
+                    <Tooltip title="Cerradura" placement="right">
+                        <Box
+                            onClick={() => setTipoReporte("Cerradura")}
+                            sx={{
+                                position: "absolute",
+                                top: "55%", left: "80%",
+                                width: 20, height: 20,
+                                bgcolor: tipoReporte === "Cerradura" ? "white" : "#2e7d32",
+                                border: "3px solid #2e7d32",
+                                borderRadius: "50%",
+                                cursor: "pointer",
+                                transform: "translate(-50%, -50%)",
+                                transition: "all 0.2s",
+                                boxShadow: tipoReporte === "Cerradura" ? "0 0 10px #2e7d32" : "none",
+                                '&:hover': { transform: "translate(-50%, -50%) scale(1.3)" }
+                            }}
+                        />
+                    </Tooltip>
 
-      {/* Descripción */}
-      <TextField
-        fullWidth
-        label="Descripción del problema"
-        multiline
-        rows={3}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography>
-          <strong>Locker seleccionado:</strong>{" "}
-          {bloqueSeleccionado && numeroSeleccionado
-            ? `${bloqueSeleccionado}-${numeroSeleccionado}`
-            : "Ninguno"}
-        </Typography>
-        <Typography>
-          <strong>Parte seleccionada:</strong> {selectedPart || "Ninguna"}
-        </Typography>
-        <Typography>
-          <strong>Descripción:</strong> {description || "Sin descripción"}
-        </Typography>
-      </Paper>
-
-      {/* Botones enviar / cancelar / borrar todo */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6}>
-          <Button
-            variant="contained"
-            color="success"
-            fullWidth
-            onClick={handleEnviarReporte}
-          >
-            {editId ? "Actualizar Reporte" : "Enviar Reporte"}
-          </Button>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Button variant="outlined" fullWidth onClick={resetForm}>
-            Cancelar
-          </Button>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Button variant="outlined" color="error" fullWidth onClick={handleClearAll}>
-            Borrar todas
-          </Button>
+                    {/* PUNTO 3: BISAGRA (Rojo) */}
+                    <Tooltip title="Bisagra" placement="left">
+                        <Box
+                            onClick={() => setTipoReporte("Bisagra")}
+                            sx={{
+                                position: "absolute",
+                                top: "25%", left: "15%",
+                                width: 20, height: 20,
+                                bgcolor: tipoReporte === "Bisagra" ? "white" : "#d32f2f",
+                                border: "3px solid #d32f2f",
+                                borderRadius: "50%",
+                                cursor: "pointer",
+                                transform: "translate(-50%, -50%)",
+                                transition: "all 0.2s",
+                                boxShadow: tipoReporte === "Bisagra" ? "0 0 10px #d32f2f" : "none",
+                                '&:hover': { transform: "translate(-50%, -50%) scale(1.3)" }
+                            }}
+                        />
+                    </Tooltip>
+                </Box>
+                <Typography variant="caption" sx={{ mt: 2, color: 'text.secondary' }}>
+                    Parte seleccionada: <strong>{tipoReporte || "Ninguna"}</strong>
+                </Typography>
+            </Paper>
         </Grid>
       </Grid>
 
-      <Divider sx={{ mb: 3 }} />
+      <Divider sx={{ my: 4 }} />
 
-      {/* Incidencias reportadas */}
-      <Typography variant="h6" gutterBottom>
-        Incidencias reportadas
+      {/* LISTA DE REPORTES */}
+      <Typography variant="h5" gutterBottom>
+        Historial de Reportes
       </Typography>
-      <Grid container spacing={2}>
-        {incidencias.length === 0 ? (
-          <Typography color="text.secondary" sx={{ ml: 2 }}>
-            No hay incidencias registradas.
-          </Typography>
-        ) : (
-          incidencias.map((inc) => (
-            <Grid item xs={12} md={6} lg={4} key={inc.id}>
-              <Card sx={{ bgcolor: "#1e1e2f", color: "white" }}>
+      
+      {reportes.length === 0 ? (
+        <Alert severity="info">No has reportado ninguna incidencia aún.</Alert>
+      ) : (
+        <Grid container spacing={2}>
+          {reportes.map((inc) => (
+            <Grid item xs={12} sm={6} md={4} key={inc.id}>
+              <Card sx={{ bgcolor: "#1e1e1e", color: "white", borderRadius: 2 }}>
                 <CardContent>
-                  <Typography variant="h6">Locker {inc.locker}</Typography>
-                  <Typography variant="body2" color="lightblue">
-                    Parte: {inc.part}
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                    <Typography variant="h6" color="primary">
+                        Locker {inc.locker?.numeroLocker || "?"}
+                    </Typography>
+                    <Chip 
+                        label={inc.estado || "PENDIENTE"} 
+                        size="small"
+                        color={inc.estado === "RESUELTO" ? "success" : "warning"}
+                    />
+                  </Box>
+                  
+                  <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
+                    Parte: <span style={{ color: '#90caf9' }}>{inc.tipoReporte}</span>
                   </Typography>
-                  <Typography variant="body2" sx={{ mt: 1 }}>
-                    {inc.description}
+                  
+                  <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic', opacity: 0.9 }}>
+                    "{inc.descripcion}"
                   </Typography>
-                  <Typography
-                    variant="caption"
-                    color="gray"
-                    sx={{ display: "block", mt: 1 }}
-                  >
-                    Fecha: {inc.date}
+                  
+                  <Typography variant="caption" color="gray" sx={{ display: "block", mt: 2 }}>
+                    Fecha: {dayjs(inc.fechaReporte).format("DD/MM/YYYY HH:mm")}
                   </Typography>
                 </CardContent>
-                <CardActions>
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    onClick={() => handleEdit(inc.id)}
-                    title="Editar"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => handleDelete(inc.id)}
-                    title="Eliminar"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
+                <CardActions sx={{ justifyContent: 'flex-end' }}>
+                  {/* Solo permitir borrar si está pendiente */}
+                  {inc.estado === "PENDIENTE" && (
+                      <IconButton size="small" color="error" onClick={() => handleDelete(inc.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                  )}
+                  {inc.estado === "RESUELTO" && (
+                      <Tooltip title="Problema resuelto">
+                          <CheckCircleIcon color="success" />
+                      </Tooltip>
+                  )}
                 </CardActions>
               </Card>
             </Grid>
-          ))
-        )}
-      </Grid>
+          ))}
+        </Grid>
+      )}
     </Box>
   );
 }

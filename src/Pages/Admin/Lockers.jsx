@@ -21,7 +21,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-const API = "http://localhost:8081/api/lockers";
+const API = "https://locker-system-backendv2.onrender.com/api/lockers";
 
 export default function Lockers() {
   const [lockers, setLockers] = useState([]);
@@ -41,7 +41,7 @@ export default function Lockers() {
       .catch(() => console.log("Error cargando lockers"));
   }, []);
   useEffect(() => {
-    fetch("http://localhost:8081/api/ubicaciones")
+    fetch("https://locker-system-backendv2.onrender.com/api/ubicaciones")
       .then((res) => res.json())
       .then((data) => setUbicaciones(data))
       .catch(() => console.log("Error cargando ubicaciones"));

@@ -26,7 +26,7 @@ const API = "http://localhost:8081/api/lockers";
 export default function Lockers() {
   const [lockers, setLockers] = useState([]);
   const [numero, setNumero] = useState("");
-  const [estado, setEstado] = useState("disponible");
+  const [estado, setEstado] = useState("DISPONIBLE");
   const [ubicaciones, setUbicaciones] = useState([]);
   const [ubicacionId, setUbicacionId] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("todos");
@@ -54,7 +54,7 @@ export default function Lockers() {
 
     const body = {
       numeroLocker: numero,
-      estado: estado.toLowerCase(),
+      estado: estado,
       ubicacionId: ubicacionId,
     };
 
@@ -94,14 +94,14 @@ export default function Lockers() {
     }
 
     setNumero("");
-    setEstado("disponible");
+    setEstado("DISPONIBLE");
   };
 
   // 3. Preparar edición
   const handleEdit = (locker) => {
     setEditId(locker.id);
     setNumero(locker.numeroLocker);
-    setEstado(locker.estado.toLowerCase());
+    setEstado(locker.estado);
   };
 
   // 4. Eliminar
@@ -111,7 +111,7 @@ export default function Lockers() {
   };
   const lockersFiltrados = lockers.filter((l) => {
     if (filtroEstado === "todos") return true;
-    return l.estado.toLowerCase() === filtroEstado.toLowerCase();
+    return l.estado === filtroEstado;
   });
 
   return (
@@ -124,74 +124,74 @@ export default function Lockers() {
 
           {/* FORM */}
           <Box
-  component="form"
-  onSubmit={handleSubmit}
-  sx={{ display: "flex", gap: 2, mb: 4 }}
->
-  <TextField
-    label="Número"
-    value={numero}
-    onChange={(e) => setNumero(e.target.value.toUpperCase())}
-    variant="filled"
-    sx={{ backgroundColor: "#2a2a2a", input: { color: "white" } }}
-  />
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{ display: "flex", gap: 2, mb: 4 }}
+          >
+            <TextField
+              label="Número"
+              value={numero}
+              onChange={(e) => setNumero(e.target.value.toUpperCase())}
+              variant="filled"
+              sx={{ backgroundColor: "#2a2a2a", input: { color: "white" } }}
+            />
 
-  <FormControl
-    variant="filled"
-    sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
-  >
-    <InputLabel sx={{ color: "#aaa" }}>Estado</InputLabel>
-    <Select
-      value={estado}
-      onChange={(e) => setEstado(e.target.value)}
-      sx={{ color: "white" }}
-    >
-      <MenuItem value="disponible">Disponible</MenuItem>
-      <MenuItem value="ocupado">Ocupado</MenuItem>
-      <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
-    </Select>
-  </FormControl>
-  
-  <FormControl
-    variant="filled"
-    sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
-  >
-    <InputLabel sx={{ color: "#aaa" }}>Ubicación</InputLabel>
-    <Select
-      value={ubicacionId}
-      onChange={(e) => setUbicacionId(e.target.value)}
-      sx={{ color: "white" }}
-    >
-      {ubicaciones.map((u) => (
-        <MenuItem key={u.id} value={u.id}>
-          {u.pabellon} - {u.piso}
-        </MenuItem>
-      ))}
-    </Select>
-  </FormControl>
+            <FormControl
+              variant="filled"
+              sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+            >
+              <InputLabel sx={{ color: "#aaa" }}>Estado</InputLabel>
+              <Select
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                sx={{ color: "white" }}
+              >
+                <MenuItem value="DISPONIBLE">DISPONIBLE</MenuItem>
+                <MenuItem value="OCUPADO">OCUPADO</MenuItem>
+                <MenuItem value="MANTENIMIENTO">MANTENIMIENTO</MenuItem>
+              </Select>
+            </FormControl>
 
-  {/* FILTRO ESTADO movido antes del botón */}
-  <FormControl
-    variant="filled"
-    sx={{ minWidth: 200, backgroundColor: "#2a2a2a" }}
-  >
-    <InputLabel sx={{ color: "#aaa" }}>Filtrar por estado</InputLabel>
-    <Select
-      value={filtroEstado}
-      onChange={(e) => setFiltroEstado(e.target.value)}
-      sx={{ color: "white" }}
-    >
-      <MenuItem value="todos">Todos</MenuItem>
-      <MenuItem value="disponible">Disponible</MenuItem>
-      <MenuItem value="ocupado">Ocupado</MenuItem>
-      <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
-    </Select>
-  </FormControl>
+            <FormControl
+              variant="filled"
+              sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+            >
+              <InputLabel sx={{ color: "#aaa" }}>Ubicación</InputLabel>
+              <Select
+                value={ubicacionId}
+                onChange={(e) => setUbicacionId(e.target.value)}
+                sx={{ color: "white" }}
+              >
+                {ubicaciones.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>
+                    {u.pabellon} - {u.piso}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-  <Button type="submit" variant="contained">
-    {editId ? "Actualizar" : "Agregar"}
-  </Button>
-</Box>
+            {/* FILTRO ESTADO movido antes del botón */}
+            <FormControl
+              variant="filled"
+              sx={{ minWidth: 200, backgroundColor: "#2a2a2a" }}
+            >
+              <InputLabel sx={{ color: "#aaa" }}>Filtrar por estado</InputLabel>
+              <Select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                sx={{ color: "white" }}
+              >
+                <MenuItem value="todos">Todos</MenuItem>
+                <MenuItem value="DISPONIBLE">DISPONIBLE</MenuItem>
+                <MenuItem value="OCUPADO">OCUPADO</MenuItem>
+                <MenuItem value="MANTENIMIENTO">MANTENIMIENTO</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Button type="submit" variant="contained">
+              {editId ? "Actualizar" : "Agregar"}
+            </Button>
+          </Box>
 
 
           {/* TABLA */}
@@ -218,11 +218,11 @@ export default function Lockers() {
                     <Chip
                       label={locker.estado}
                       color={
-                        locker.estado === "disponible"
+                        locker.estado === "DISPONIBLE"
                           ? "success"
-                          : locker.estado === "ocupado"
-                          ? "error"
-                          : "warning"
+                          : locker.estado === "OCUPADO"
+                            ? "error"
+                            : "warning"
                       }
                     />
                   </TableCell>
@@ -259,7 +259,7 @@ export default function Lockers() {
           </Table>
         </CardContent>
       </Card>
-         
+
     </Box>
   );
 }

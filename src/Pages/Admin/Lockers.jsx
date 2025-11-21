@@ -21,12 +21,12 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-const API = "https://locker-system-backendv2.onrender.com/api/lockers";
+const API = "http://localhost:8081/api/lockers";
 
 export default function Lockers() {
   const [lockers, setLockers] = useState([]);
   const [numero, setNumero] = useState("");
-  const [estado, setEstado] = useState("disponible");
+  const [estado, setEstado] = useState("DISPONIBLE");
   const [ubicaciones, setUbicaciones] = useState([]);
   const [ubicacionId, setUbicacionId] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("todos");
@@ -41,7 +41,7 @@ export default function Lockers() {
       .catch(() => console.log("Error cargando lockers"));
   }, []);
   useEffect(() => {
-    fetch("https://locker-system-backendv2.onrender.com/api/ubicaciones")
+    fetch("http://localhost:8081/api/ubicaciones")
       .then((res) => res.json())
       .then((data) => setUbicaciones(data))
       .catch(() => console.log("Error cargando ubicaciones"));
@@ -54,7 +54,7 @@ export default function Lockers() {
 
     const body = {
       numeroLocker: numero,
-      estado: estado.toLowerCase(),
+      estado: estado,
       ubicacionId: ubicacionId,
     };
 
@@ -101,7 +101,7 @@ export default function Lockers() {
   const handleEdit = (locker) => {
     setEditId(locker.id);
     setNumero(locker.numeroLocker);
-    setEstado(locker.estado.toLowerCase());
+    setEstado(locker.estado);
   };
 
   // 4. Eliminar
@@ -111,7 +111,7 @@ export default function Lockers() {
   };
   const lockersFiltrados = lockers.filter((l) => {
     if (filtroEstado === "todos") return true;
-    return l.estado.toLowerCase() === filtroEstado.toLowerCase();
+    return l.estado === filtroEstado;
   });
 
   return (
@@ -146,9 +146,9 @@ export default function Lockers() {
                 onChange={(e) => setEstado(e.target.value)}
                 sx={{ color: "white" }}
               >
-                <MenuItem value="DISPONIBLE">Disponible</MenuItem>
-                <MenuItem value="OCUPADO">Ocupado</MenuItem>
-                <MenuItem value="MANTENIMIENTO">Mantenimiento</MenuItem>
+                <MenuItem value="DISPONIBLE">DISPONIBLE</MenuItem>
+                <MenuItem value="OCUPADO">OCUPADO</MenuItem>
+                <MenuItem value="MANTENIMIENTO">MANTENIMIENTO</MenuItem>
               </Select>
             </FormControl>
 
@@ -182,9 +182,9 @@ export default function Lockers() {
                 sx={{ color: "white" }}
               >
                 <MenuItem value="todos">Todos</MenuItem>
-                <MenuItem value="disponible">Disponible</MenuItem>
-                <MenuItem value="ocupado">Ocupado</MenuItem>
-                <MenuItem value="en mantenimiento">Mantenimiento</MenuItem>
+                <MenuItem value="DISPONIBLE">DISPONIBLE</MenuItem>
+                <MenuItem value="OCUPADO">OCUPADO</MenuItem>
+                <MenuItem value="MANTENIMIENTO">MANTENIMIENTO</MenuItem>
               </Select>
             </FormControl>
 
@@ -218,9 +218,9 @@ export default function Lockers() {
                     <Chip
                       label={locker.estado}
                       color={
-                        locker.estado === "disponible"
+                        locker.estado === "DISPONIBLE"
                           ? "success"
-                          : locker.estado === "ocupado"
+                          : locker.estado === "OCUPADO"
                             ? "error"
                             : "warning"
                       }

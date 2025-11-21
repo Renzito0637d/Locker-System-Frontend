@@ -1,4 +1,5 @@
-import * as React from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { styled, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import MuiDrawer from "@mui/material/Drawer";
@@ -18,17 +19,11 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
-import { Avatar, Button } from "@mui/material";
+import { Avatar, Button, CircularProgress, Dialog, DialogActions, DialogTitle } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
-import { useNavigate } from "react-router-dom";
 import { EventAvailable } from "@mui/icons-material";
-
-const user = {
-  name: "Luis Sánchez",
-  email: "luis.sanchez@gmail.com",
-  avatar: "https://img.freepik.com/psd-gratis/ilustracion-3d-avatar-o-perfil-humano_23-2150671122.jpg",
-};
+import { getMe, logout } from "../../lib/auth";
 
 const drawerWidth = 240;
 
@@ -109,6 +104,8 @@ const Drawer = styled(MuiDrawer, {
   ],
 }));
 
+
+
 /**
  * Menu del USUARIO para navegar entre componentes
  */
@@ -131,6 +128,56 @@ export default function LayoutUser({ viewsUser }) {
   ];
 
   const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await logout();
+      navigate("/");
+    } catch (err) {
+      console.error("Logout error:", err);
+      navigate("/");
+    } finally {
+      setLoading(false);
+      setConfirmOpen(false);
+    }
+  };
+
+  // Usuario datos
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getMe()
+      .then((data) => {
+        // Construimos la URL del avatar usando el servicio externo
+        // data trae: { userName, apellido, email, ... }
+        const fullName = `${data.userName}+${data.apellido}`;
+        const avatarUrl = `https://ui-avatars.com/api/?name=${fullName}&background=random&color=fff&size=128`;
+
+        setUser({
+          name: `${data.userName} ${data.apellido}`,
+          email: data.email,
+          avatar: avatarUrl,
+        });
+      })
+      .catch((err) => {
+        console.error("Error obteniendo usuario", err);
+        // Manejo opcional: usuario null o placeholder
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+        <CircularProgress size={20} />
+      </Box>
+    );
+  }
+
+  if (!user) return null;
 
   // Render principal
   return (
@@ -196,7 +243,7 @@ export default function LayoutUser({ viewsUser }) {
 
         <Divider />
 
-        {/* Cuenta estática pegada abajo */}
+
         <Box
           sx={{
             position: "absolute",
@@ -214,9 +261,12 @@ export default function LayoutUser({ viewsUser }) {
               alignItems: "center",
               gap: 1.5,
               justifyContent: open ? "flex-start" : "center",
+              // Opcional: Padding para que se vea bien en el sidebar
+              p: 2,
             }}
           >
-            <Avatar src={user.avatar} alt={user.name}>
+            <Avatar src={user.avatar} alt={user.name} sx={{ width: 40, height: 40 }}>
+              {/* Fallback si falla la imagen */}
               {!user.avatar && (user.name?.[0] || "U")}
             </Avatar>
 
@@ -239,7 +289,8 @@ export default function LayoutUser({ viewsUser }) {
                 size="small"
                 fullWidth
                 startIcon={<LogoutRoundedIcon />}
-                onClick={() => navigate("/")}
+                onClick={() => setConfirmOpen(true)}
+                disabled={loading}
               >
                 Cerrar sesión
               </Button>
@@ -247,14 +298,26 @@ export default function LayoutUser({ viewsUser }) {
               <IconButton
                 color="inherit"
                 size="small"
-                onClick={() => navigate("/")}
+                onClick={() => setConfirmOpen(true)}
                 sx={{ mx: "auto", display: "block" }}
                 aria-label="Cerrar sesión"
+                disabled={loading}
               >
                 <LogoutRoundedIcon />
               </IconButton>
             )}
           </Box>
+
+          {/* Diálogo de confirmación opcional */}
+          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+            <DialogTitle>{"¿Cerrar sesión?"}</DialogTitle>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={() => setConfirmOpen(false)} disabled={loading}>Cancelar</Button>
+              <Button onClick={handleLogout} variant="contained" disabled={loading}>
+                {loading ? <CircularProgress size={18} color="inherit" /> : "Sí, salir"}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       </Drawer>
 

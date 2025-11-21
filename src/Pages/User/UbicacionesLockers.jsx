@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Box,
     Table,
@@ -15,128 +15,168 @@ import {
     TextField,
     Typography,
     Container,
+    CircularProgress,
 } from "@mui/material";
+import { getUbicaciones } from "../../services/UbicacionService";
 
 export default function UbicacionesLockers() {
 
-    const [sortBy, setSortBy] = useState("id");
-    const [filterPabellon, setFilterPabellon] = useState("");
-    const [filterPiso, setFilterPiso] = useState("");
+    const [ubicaciones, setUbicaciones] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    const data = [
-        { id: 1, area: "A12", pabellon: "A", piso: 12, descripcion: "Cerca del laboratorio" },
-        { id: 2, area: "A10", pabellon: "A", piso: 10, descripcion: "Frente a la biblioteca" },
-        { id: 3, area: "B08", pabellon: "B", piso: 8, descripcion: "Al lado del gimnasio" },
-        { id: 4, area: "A15", pabellon: "A", piso: 15, descripcion: "Pasillo central" },
-        { id: 5, area: "B02", pabellon: "B", piso: 2, descripcion: "Cerca de la cafetería" },
-        { id: 6, area: "A05", pabellon: "A", piso: 5, descripcion: "Junto a la sala de informática" },
-        { id: 7, area: "B12", pabellon: "B", piso: 12, descripcion: "Zona norte" },
-        { id: 8, area: "A03", pabellon: "A", piso: 3, descripcion: "Cerca del auditorio" },
-        { id: 9, area: "B10", pabellon: "B", piso: 10, descripcion: "Pasillo sur" },
-        { id: 10, area: "A08", pabellon: "A", piso: 8, descripcion: "Junto a la oficina de administración" },
-    ];
+  // 2. Estados para filtros y ordenamiento
+  const [sortBy, setSortBy] = useState("id");
+  const [filterPabellon, setFilterPabellon] = useState("");
+  const [filterPiso, setFilterPiso] = useState("");
 
-    // Aplicar filtros
-    const filteredData = data.filter((item) => {
-        return (
-            (filterPabellon ? item.pabellon === filterPabellon : true) &&
-            (filterPiso ? item.piso === Number(filterPiso) : true)
-        );
+  // 3. Cargar datos al montar
+  useEffect(() => {
+    getUbicaciones()
+      .then((data) => {
+        // Validación de seguridad por si el backend falla
+        if (Array.isArray(data)) setUbicaciones(data);
+        else setUbicaciones([]);
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // 4. Lógica de Filtrado y Ordenamiento (useMemo para eficiencia)
+  const sortedData = useMemo(() => {
+    let data = [...ubicaciones];
+
+    // A. FILTRAR
+    if (filterPabellon) {
+      // Compara ignorando mayúsculas/minúsculas
+      data = data.filter((u) => 
+        u.pabellon.toLowerCase() === filterPabellon.toLowerCase()
+      );
+    }
+    if (filterPiso) {
+      // Filtro flexible (coincidencia parcial)
+      data = data.filter((u) => 
+        u.piso.toString().toLowerCase().includes(filterPiso.toLowerCase())
+      );
+    }
+
+    // B. ORDENAR
+    data.sort((a, b) => {
+      if (sortBy === "id") {
+        return a.id - b.id;
+      }
+      if (sortBy === "pabellon") {
+        return a.pabellon.localeCompare(b.pabellon);
+      }
+      if (sortBy === "piso") {
+        // Ordenamiento numérico inteligente ("Piso 2" antes que "Piso 10")
+        return a.piso.localeCompare(b.piso, undefined, { numeric: true });
+      }
+      return 0;
     });
 
-    // Ordenar
-    const sortedData = [...filteredData].sort((a, b) => {
-        if (sortBy === "id") return a.id - b.id;
-        if (sortBy === "pabellon") return a.pabellon.localeCompare(b.pabellon);
-        if (sortBy === "piso") return a.piso - b.piso;
-        return 0;
-    });
+    return data;
+  }, [ubicaciones, filterPabellon, filterPiso, sortBy]);
 
-    return (
-        <>
-            <Container maxWidth="lg">
-                <Paper elevation={2} sx={{ p: 2 }}>
-                    <Box
-                        sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "flex-start",
-                            mb: 3,
-                            flexWrap: "wrap",
-                            gap: 2,
-                        }}
-                    >
-                        {/* Ordenar */}
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                            <Typography variant="subtitle2" color="text.secondary">
-                                Ordenar por
-                            </Typography>
-                            <FormControl sx={{ minWidth: 150 }}>
-                                <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                                    <MenuItem value="id">ID</MenuItem>
-                                    <MenuItem value="pabellon">Pabellón</MenuItem>
-                                    <MenuItem value="piso">Piso</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Box>
+  if (loading) {
+    return <Box display="flex" justifyContent="center" mt={5}><CircularProgress /></Box>;
+  }
 
-                        {/* Buscar */}
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                            <Typography variant="subtitle2" color="text.secondary">
-                                Buscar por
-                            </Typography>
-                            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                                <FormControl sx={{ minWidth: 120 }}>
-                                    <InputLabel>Pabellón</InputLabel>
-                                    <Select
-                                        value={filterPabellon}
-                                        onChange={(e) => setFilterPabellon(e.target.value)}
-                                        label="Pabellón"
-                                    >
-                                        <MenuItem value="">Todos</MenuItem>
-                                        <MenuItem value="A">A</MenuItem>
-                                        <MenuItem value="B">B</MenuItem>
-                                    </Select>
-                                </FormControl>
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Ubicaciones Disponibles
+      </Typography>
 
-                                <TextField
-                                    label="Piso"
-                                    type="number"
-                                    value={filterPiso}
-                                    onChange={(e) => setFilterPiso(e.target.value)}
-                                />
-                            </Box>
-                        </Box>
-                    </Box>
+      <Paper elevation={2} sx={{ p: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 3,
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
+          {/* Ordenar */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Ordenar por
+            </Typography>
+            <FormControl sx={{ minWidth: 150 }} size="small">
+              <Select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <MenuItem value="id">ID</MenuItem>
+                <MenuItem value="pabellon">Pabellón</MenuItem>
+                <MenuItem value="piso">Piso</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
 
+          {/* Buscar */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Filtrar por
+            </Typography>
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+              <FormControl sx={{ minWidth: 120 }} size="small">
+                <InputLabel>Pabellón</InputLabel>
+                <Select
+                  value={filterPabellon}
+                  onChange={(e) => setFilterPabellon(e.target.value)}
+                  label="Pabellón"
+                >
+                  <MenuItem value=""><em>Todos</em></MenuItem>
+                  {/* Generamos opciones dinámicas basadas en lo que hay en BD, o estáticas */}
+                  <MenuItem value="A">A</MenuItem>
+                  <MenuItem value="B">B</MenuItem>
+                </Select>
+              </FormControl>
 
-                    {/* Tabla */}
-                    <TableContainer component={Paper}>
-                        <Table>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>ID</TableCell>
-                                    <TableCell>Área</TableCell>
-                                    <TableCell>Pabellón</TableCell>
-                                    <TableCell>Piso</TableCell>
-                                    <TableCell>Descripción</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {sortedData.map((row) => (
-                                    <TableRow key={row.id}>
-                                        <TableCell>{row.id}</TableCell>
-                                        <TableCell>{row.area}</TableCell>
-                                        <TableCell>{row.pabellon}</TableCell>
-                                        <TableCell>{row.piso}</TableCell>
-                                        <TableCell>{row.descripcion}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                </Paper>
-            </Container>
-        </>
-    );
+              <TextField
+                label="Piso"
+                size="small"
+                value={filterPiso}
+                onChange={(e) => setFilterPiso(e.target.value)}
+                placeholder="Ej: 2"
+              />
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Tabla */}
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>Edificio</TableCell> {/* Cambié Área por Edificio */}
+                <TableCell>Pabellón</TableCell>
+                <TableCell>Piso</TableCell>
+                <TableCell>Descripción</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedData.length > 0 ? (
+                sortedData.map((row) => (
+                  <TableRow key={row.id} hover>
+                    <TableCell>{row.id}</TableCell>
+                    <TableCell>{row.nombreEdificio}</TableCell> {/* Ojo: nombreEdificio, no area */}
+                    <TableCell>{row.pabellon}</TableCell>
+                    <TableCell>{row.piso}</TableCell>
+                    <TableCell>{row.descripcion}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center">
+                    No se encontraron ubicaciones con esos filtros.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </Container>
+  );
 }

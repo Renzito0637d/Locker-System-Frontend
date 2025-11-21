@@ -1,319 +1,368 @@
 import React, { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import {
-  Container,
-  Typography,
-  Button,
-  MenuItem,
-  Box,
-  FormControl,
-  InputLabel,
-  Select,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Card,
-  CardContent,
-  CardActions,
-  Chip,
+    Container,
+    Typography,
+    Button,
+    MenuItem,
+    Box,
+    FormControl,
+    InputLabel,
+    Select,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
+    Card,
+    CardContent,
+    CardActions,
+    Chip,
+    CircularProgress,
+    Alert,
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
-
-const STORAGE_KEYS = {
-  RESERVAS: "reservasLockers_v1",
-  DRAFT: "reservasLockers_draft_v1",
-};
+import { getMe } from "../../lib/auth";
+import { createReserva, deleteReserva, getLockers, getMisReservas } from "../../services/ReservaService";
 
 const ReservarLocker = () => {
-  const bloques = ["A", "B", "C", "D", "E", "F"];
-  const numeros = Array.from({ length: 20 }, (_, i) =>
-    String(i + 1).padStart(2, "0")
-  );
+    // --- ESTADOS DE DATOS ---
+    const [userId, setUserId] = useState(null);
+    const [lockers, setLockers] = useState([]);
+    const [reservas, setReservas] = useState([]);
 
-  const [formData, setFormData] = useState({
-    bloque: "",
-    numero: "",
-    fecha: null,
-    hora: null,
-  });
+    // --- ESTADOS DEL FORMULARIO ---
+    const [pabellon, setPabellon] = useState("");
+    const [piso, setPiso] = useState("");
+    const [selectedLockerId, setSelectedLockerId] = useState("");
 
-  const [openGuide, setOpenGuide] = useState(false);
-  const [reservas, setReservas] = useState([]);
-  const [selectedToCancel, setSelectedToCancel] = useState(null);
+    const [fecha, setFecha] = useState(dayjs());
+    const [hora, setHora] = useState(dayjs());
 
-  // === cargar datos al montar ===
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.RESERVAS);
-      if (stored) {
-        setReservas(JSON.parse(stored));
-      }
+    // --- ESTADOS DE UI ---
+    const [loading, setLoading] = useState(true);
+    const [openGuide, setOpenGuide] = useState(false);
+    const [selectedToCancel, setSelectedToCancel] = useState(null);
+    const [errorMsg, setErrorMsg] = useState(null);
 
-      const draft = localStorage.getItem(STORAGE_KEYS.DRAFT);
-      if (draft) {
-        const pd = JSON.parse(draft);
-        setFormData({
-          bloque: pd.bloque || "",
-          numero: pd.numero || "",
-          fecha: pd.fecha ? dayjs(pd.fecha) : null,
-          hora: pd.hora ? dayjs(pd.hora, "HH:mm") : null,
-        });
-      }
-    } catch (e) {
-      console.error("Error al leer localStorage:", e);
-    }
-  }, []);
+    // 1. CARGA INICIAL
+    useEffect(() => {
+        async function loadData() {
+            try {
+                const user = await getMe();
+                setUserId(user.id);
 
-  // === guardar reservas ===
-  const saveReservas = (newReservas) => {
-    setReservas(newReservas);
-    localStorage.setItem(STORAGE_KEYS.RESERVAS, JSON.stringify(newReservas));
-  };
+                const lockersData = await getLockers();
+                setLockers(lockersData);
 
-  // === guardar draft (cuando el usuario cambia algo) ===
-  useEffect(() => {
-    if (!formData.bloque && !formData.numero && !formData.fecha && !formData.hora) {
-      return; // no guardamos si está vacío
-    }
+                const reservasData = await getMisReservas();
+                setReservas(reservasData);
 
-    const draftToStore = {
-      bloque: formData.bloque,
-      numero: formData.numero,
-      fecha: formData.fecha ? formData.fecha.format("YYYY-MM-DD") : null,
-      hora: formData.hora ? formData.hora.format("HH:mm") : null,
+            } catch (error) {
+                console.error("Error cargando datos:", error);
+                setErrorMsg("Error al cargar la información. Intenta recargar.");
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadData();
+    }, []);
+
+    // ---------------------------------------------------------
+    // CORRECCIÓN: NORMALIZACIÓN DE DATOS
+    // ---------------------------------------------------------
+    const listaLockers = Array.isArray(lockers) ? lockers : [];
+
+    // Esta función maneja si el backend envía objeto {pabellon: 'A'} o string "A - 1"
+    const lockersNormalizados = listaLockers.map(l => {
+        let _pabellon = "?";
+        let _piso = "?";
+
+        if (l.ubicacion) {
+            if (typeof l.ubicacion === 'object') {
+                // Caso ideal: es un objeto
+                _pabellon = l.ubicacion.pabellon;
+                _piso = l.ubicacion.piso;
+            } else if (typeof l.ubicacion === 'string') {
+                // Caso actual: es un string "B - 67"
+                // Separamos por el guión
+                const parts = l.ubicacion.split('-');
+                if (parts.length >= 2) {
+                    _pabellon = parts[0].trim(); // Quita espacios extra
+                    _piso = parts[1].trim();
+                } else {
+                    // Fallback si el string no tiene guión
+                    _pabellon = l.ubicacion;
+                }
+            }
+        }
+        // Retornamos el locker con campos auxiliares limpios
+        return { ...l, _pabellon, _piso };
+    });
+
+    // Usamos los lockers normalizados para los filtros
+    const pabellonesUnicos = [...new Set(lockersNormalizados.map(l => l._pabellon).filter(p => p !== "?"))].sort();
+
+    const pisosDisponibles = [...new Set(
+        lockersNormalizados
+            .filter(l => l._pabellon === pabellon)
+            .map(l => l._piso)
+    )].sort();
+
+    const lockersFiltrados = lockersNormalizados.filter(l =>
+        l._pabellon === pabellon &&
+        l._piso === piso &&
+        l.estado === "DISPONIBLE"
+    );
+
+    // ---------------------------------------------------------
+
+    // 3. CREAR RESERVA
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setErrorMsg(null);
+
+        if (!selectedLockerId || !fecha || !hora) {
+            setErrorMsg("Por favor completa todos los campos.");
+            return;
+        }
+
+        const fechaInicio = fecha.hour(hora.hour()).minute(hora.minute()).second(0);
+        const fechaFin = fechaInicio.add(2, 'hour');
+
+        const payload = {
+            fechaInicio: fechaInicio.format("YYYY-MM-DDTHH:mm:ss"),
+            fechaFin: fechaFin.format("YYYY-MM-DDTHH:mm:ss"),
+            estadoReserva: "PENDIENTE",
+            userId: userId,
+            lockerId: selectedLockerId
+        };
+
+        try {
+            await createReserva(payload);
+            alert("¡Solicitud de reserva enviada con éxito!");
+
+            const nuevasReservas = await getMisReservas();
+            setReservas(nuevasReservas);
+
+            // Actualizar lockers (para que el reservado ya no salga disponible)
+            const nuevosLockers = await getLockers();
+            setLockers(nuevosLockers);
+
+            setSelectedLockerId("");
+        } catch (error) {
+            console.error(error);
+            setErrorMsg("No se pudo crear la reserva.");
+        }
     };
 
-    localStorage.setItem(STORAGE_KEYS.DRAFT, JSON.stringify(draftToStore));
-  }, [formData]);
+    // 4. CANCELAR RESERVA
+    const handleConfirmCancel = async () => {
+        if (!selectedToCancel) return;
+        try {
+            await deleteReserva(selectedToCancel);
+            setReservas(reservas.filter(r => r.id !== selectedToCancel));
 
-  // === handlers ===
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
+            // Actualizar lockers disponibles
+            const nuevosLockers = await getLockers();
+            setLockers(nuevosLockers);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (!formData.bloque || !formData.numero || !formData.fecha || !formData.hora) {
-      alert("Completa bloque, número, fecha y hora.");
-      return;
-    }
-
-    const nuevaReserva = {
-      id: reservas.length > 0 ? Math.max(...reservas.map((r) => r.id)) + 1 : 1,
-      bloque: formData.bloque,
-      numero: formData.numero,
-      fecha: formData.fecha.format("YYYY-MM-DD"),
-      hora: formData.hora.format("HH:mm"),
-      estado: "Activo",
+            setSelectedToCancel(null);
+        } catch (error) {
+            console.error(error);
+            alert("Error al cancelar");
+        }
     };
 
-    const updated = [...reservas, nuevaReserva];
-    saveReservas(updated);
+    const getStatusColor = (status) => {
+        const s = status ? status.toUpperCase() : "";
+        switch (s) {
+            case "APROBADA": return "success";
+            case "PENDIENTE": return "warning";
+            case "RECHAZADA": return "error";
+            case "CANCELADA": return "default";
+            case "FINALIZADA": return "info";
+            default: return "default";
+        }
+    };
 
-    // limpiar formulario y draft
-    setFormData({ bloque: "", numero: "", fecha: null, hora: null });
-    localStorage.removeItem(STORAGE_KEYS.DRAFT);
+    if (loading) return <Box display="flex" justifyContent="center" mt={5}><CircularProgress /></Box>;
 
-    console.log("Reserva realizada:", nuevaReserva);
-  };
+    const reservaSeleccionada = reservas.find(r => r.id === selectedToCancel);
 
-  const handleCancelClick = (id) => {
-    setSelectedToCancel(id);
-  };
+    return (
+        <Container maxWidth="sm" sx={{ mt: 5, mb: 5 }}>
+            <Typography variant="h5" gutterBottom>
+                Reservar Locker
+            </Typography>
 
-  const handleConfirmCancel = () => {
-    if (selectedToCancel == null) return;
-    const updated = reservas.filter((r) => r.id !== selectedToCancel);
-    saveReservas(updated);
-    setSelectedToCancel(null);
-  };
+            {errorMsg && <Alert severity="error" sx={{ mb: 2 }}>{errorMsg}</Alert>}
 
-  const handleCloseCancel = () => {
-    setSelectedToCancel(null);
-  };
+            {/* FORMULARIO */}
+            <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 
-  const reservaSeleccionada = reservas.find((r) => r.id === selectedToCancel);
+                <FormControl fullWidth required>
+                    <InputLabel>Pabellón</InputLabel>
+                    <Select
+                        value={pabellon}
+                        label="Pabellón"
+                        onChange={(e) => {
+                            setPabellon(e.target.value);
+                            setPiso("");
+                            setSelectedLockerId("");
+                        }}
+                    >
+                        {pabellonesUnicos.map((p) => (
+                            <MenuItem key={p} value={p}>Pabellón {p}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
 
-  return (
-    <Container maxWidth="sm" sx={{ mt: 5 }}>
-      <Typography variant="h5" gutterBottom>
-        Reservar Locker
-      </Typography>
+                <FormControl fullWidth required disabled={!pabellon}>
+                    <InputLabel>Piso</InputLabel>
+                    <Select
+                        value={piso}
+                        label="Piso"
+                        onChange={(e) => {
+                            setPiso(e.target.value);
+                            setSelectedLockerId("");
+                        }}
+                    >
+                        {pisosDisponibles.map((p) => (
+                            <MenuItem key={p} value={p}>{p}° Piso</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
 
-      {/* FORMULARIO */}
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-      >
-        <FormControl fullWidth>
-          <InputLabel id="bloque-label">Bloque</InputLabel>
-          <Select
-            labelId="bloque-label"
-            name="bloque"
-            value={formData.bloque}
-            onChange={handleChange}
-            required
-          >
-            {bloques.map((b) => (
-              <MenuItem key={b} value={b}>
-                {`Bloque ${b}`}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+                <FormControl fullWidth required disabled={!piso}>
+                    <InputLabel>Número de Locker</InputLabel>
+                    <Select
+                        value={selectedLockerId}
+                        label="Número de Locker"
+                        onChange={(e) => setSelectedLockerId(e.target.value)}
+                    >
+                        {lockersFiltrados.map((l) => (
+                            <MenuItem key={l.id} value={l.id}>
+                                Locker {l.numeroLocker}
+                            </MenuItem>
+                        ))}
+                        {lockersFiltrados.length === 0 && piso && (
+                            <MenuItem disabled>No hay lockers disponibles</MenuItem>
+                        )}
+                    </Select>
+                </FormControl>
 
-        <FormControl fullWidth>
-          <InputLabel id="numero-label">Número</InputLabel>
-          <Select
-            labelId="numero-label"
-            name="numero"
-            value={formData.numero}
-            onChange={handleChange}
-            required
-          >
-            {numeros.map((n) => (
-              <MenuItem key={n} value={n}>
-                {n}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DatePicker
+                        label="Fecha"
+                        value={fecha}
+                        onChange={(newValue) => setFecha(newValue)}
+                        disablePast
+                        format="DD/MM/YYYY"
+                        slotProps={{ textField: { required: true } }}
+                    />
+                    <TimePicker
+                        label="Hora de Inicio"
+                        value={hora}
+                        onChange={(newValue) => setHora(newValue)}
+                        slotProps={{ textField: { required: true } }}
+                    />
+                </LocalizationProvider>
 
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <DatePicker
-            label="Fecha"
-            value={formData.fecha}
-            onChange={(newValue) => {
-              setFormData((prev) => ({ ...prev, fecha: newValue }));
-            }}
-            disablePast
-            format="DD/MM/YYYY"
-          />
-          <TimePicker
-            label="Hora"
-            value={formData.hora}
-            onChange={(newValue) => {
-              setFormData((prev) => ({ ...prev, hora: newValue }));
-            }}
-          />
-        </LocalizationProvider>
-        {/* Guía (modal informativo) */}
-        <Button variant="outlined" onClick={() => setOpenGuide(true)}>
-          Ver distribución de lockers
-        </Button>
-        <Dialog open={openGuide} onClose={() => setOpenGuide(false)} maxWidth="md" fullWidth >
-          <DialogTitle>
-            Distribución de lockers
-          </DialogTitle>
-          <DialogContent dividers>
-            <Box sx={{ display: "flex", justifyContent: "center" }}>
-              <img src="/images/guia-lockers.png" alt="Distribución de lockers" style={{ maxWidth: "100%", borderRadius: 8 }} />
+                <Button variant="outlined" onClick={() => setOpenGuide(true)}>
+                    Ver distribución de lockers
+                </Button>
+
+                <Dialog open={openGuide} onClose={() => setOpenGuide(false)} maxWidth="md" fullWidth >
+                    <DialogTitle>Distribución de lockers</DialogTitle>
+                    <DialogContent dividers>
+                        <Box sx={{ display: "flex", justifyContent: "center" }}>
+                            <img src="https://via.placeholder.com/600x300?text=Mapa+Lockers" alt="Mapa" style={{ maxWidth: "100%", borderRadius: 8 }} />
+                        </Box>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setOpenGuide(false)}>Cerrar</Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Button type="submit" variant="contained" color="primary" size="large">
+                    Confirmar Reserva
+                </Button>
             </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenGuide(false)}>
-              Cerrar
-            </Button>
-          </DialogActions>
-        </Dialog>
-        <Button type="submit" variant="contained" color="primary">
-          Reservar
-        </Button>
-      </Box>
 
-      {/* LISTA DE RESERVAS */}
-      <Box sx={{ mt: 5 }}>
-        <Typography variant="h6" gutterBottom>
-          Mis Lockers Reservados
-        </Typography>
+            {/* LISTA DE RESERVAS */}
+            <Box sx={{ mt: 5 }}>
+                <Typography variant="h6" gutterBottom>
+                    Mis Solicitudes de Reserva
+                </Typography>
 
-        {reservas.length === 0 ? (
-          <Typography color="text.secondary">
-            No tienes lockers reservados aún.
-          </Typography>
-        ) : (
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-              gap: 2,
-              mt: 2,
-            }}
-          >
-            {reservas.map((reserva) => (
-              <Card key={reserva.id} sx={{ borderRadius: 2, boxShadow: 3 }}>
-                <CardContent>
-                  <Typography variant="h6" color="primary">
-                    Locker {reserva.bloque}-{reserva.numero}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    📅 {reserva.fecha} ⏰ {reserva.hora}
-                  </Typography>
-                  <Chip
-                    label={reserva.estado}
-                    color={reserva.estado === "Activo" ? "success" : "error"}
-                    size="small"
-                    sx={{ mt: 1 }}
-                  />
-                </CardContent>
-                <CardActions>
-                  <Button
-                    size="small"
-                    color="error"
-                    onClick={() => handleCancelClick(reserva.id)}
-                  >
-                    Cancelar
-                  </Button>
-                </CardActions>
-              </Card>
-            ))}
-          </Box>
-        )}
-      </Box>
+                {reservas.length === 0 ? (
+                    <Typography color="text.secondary">No tienes lockers reservados aún.</Typography>
+                ) : (
+                    <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 2, mt: 2 }}>
+                        {reservas.map((reserva) => (
+                            <Card key={reserva.id} sx={{ borderRadius: 2, boxShadow: 3 }}>
+                                <CardContent>
+                                    <Typography variant="h6" color="primary">
+                                        Locker {reserva.locker?.numeroLocker || "?"}
+                                    </Typography>
 
-      {/* CONFIRMAR CANCELACIÓN */}
-      <Dialog
-        open={selectedToCancel !== null}
-        onClose={handleCloseCancel}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>Confirmar cancelación</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {reservaSeleccionada ? (
-              <>
-                ¿Estás seguro que deseas cancelar la reserva del locker{" "}
-                <strong>
-                  {reservaSeleccionada.bloque}-{reservaSeleccionada.numero}
-                </strong>{" "}
-                programada para <strong>{reservaSeleccionada.fecha}</strong> a
-                las <strong>{reservaSeleccionada.hora}</strong>?
-              </>
-            ) : (
-              "¿Estás seguro que deseas cancelar esta reserva?"
-            )}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCancel}>No, regresar</Button>
-          <Button color="error" onClick={handleConfirmCancel}>
-            Sí, cancelar
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
-  );
-};
+                                    {/* Manejo defensivo para mostrar ubicación en las tarjetas también */}
+                                    <Typography variant="body2" fontWeight="bold">
+                                        {/* Si viene como objeto DTO (ReservaResponse) */}
+                                        {reserva.locker?.ubicacion?.pabellon
+                                            ? `${reserva.locker.ubicacion.pabellon} - Piso ${reserva.locker.ubicacion.piso}`
+                                            : "Ubicación pendiente"
+                                        }
+                                    </Typography>
+
+                                    <Typography variant="body2" color="text.secondary" mt={1}>
+                                        📅 {dayjs(reserva.fechaInicio).format("DD/MM/YYYY")}
+                                        <br />
+                                        ⏰ {dayjs(reserva.fechaInicio).format("HH:mm")} - {dayjs(reserva.fechaFin).format("HH:mm")}
+                                    </Typography>
+                                    <Chip
+                                        label={reserva.estadoReserva || "ACTIVA"}
+                                        color={getStatusColor(reserva.estadoReserva)}
+                                        size="small"
+                                        sx={{ mt: 1 }}
+                                    />
+                                </CardContent>
+                                <CardActions>
+                                    {reserva.estadoReserva !== "CANCELADA" && reserva.estadoReserva !== "RECHAZADA" && (
+                                        <Button size="small" color="error" onClick={() => setSelectedToCancel(reserva.id)}>
+                                            Cancelar
+                                        </Button>
+                                    )}
+                                </CardActions>
+                            </Card>
+                        ))}
+                    </Box>
+                )}
+            </Box>
+
+            <Dialog open={selectedToCancel !== null} onClose={() => setSelectedToCancel(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>Confirmar cancelación</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        {reservaSeleccionada ? (
+                            <>
+                                ¿Estás seguro que deseas cancelar la reserva del locker{" "}
+                                <strong>{reservaSeleccionada.locker?.numeroLocker}</strong>?
+                            </>
+                        ) : "Cancelar reserva?"}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setSelectedToCancel(null)}>No, regresar</Button>
+                    <Button color="error" onClick={handleConfirmCancel}>Sí, cancelar</Button>
+                </DialogActions>
+            </Dialog>
+        </Container>
+    );
+}
 
 export default ReservarLocker;

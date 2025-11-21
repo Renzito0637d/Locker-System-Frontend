@@ -1,14 +1,41 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, TextField, Paper, Typography, Box } from "@mui/material";
+import { Button, TextField, Paper, Typography, Box, Alert, CircularProgress } from "@mui/material";
+import { getMe, login } from "../lib/auth";
 
 export default function Login() {
-    const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
+    const navigate = useNavigate();
+    const [userName, setUserName] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Aquí va la validación
-        navigate("/usuario"); // Redirige al panel admin después de login
+        setError("");
+        setLoading(true);
+
+        try {
+            // 1️⃣ Login: envía credenciales al backend
+            await login(userName, password);
+
+            // 2️⃣ Obtener información del usuario autenticado
+            const user = await getMe();
+            const roles = user.roles || [];
+
+            // 3️⃣ Redirección según rol
+            if (roles.includes("ROLE_ADMIN")) navigate("/admin");
+            else if (roles.includes("ROLE_ESTUDIANTE") || roles.includes("ROLE_ESTUDIANTE"))
+                navigate("/usuario");
+            else navigate("/");
+
+        } catch (err) {
+            console.error(err);
+            setError("Usuario o contraseña incorrectos");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -18,9 +45,10 @@ export default function Login() {
                 <Box display="flex" justifyContent="center">
                     <Box
                         component="img"
-                        src="https://sercodesac.com/wp-content/uploads/2024/10/Logo-UTP-300x300.png"   // pon la ruta de tu logo (carpeta public en React)
+                        src="https://visualizate.utpxpedition.com/sites/default/files/2020-02/logo-visualizate.png"   // pon la ruta de tu logo (carpeta public en React)
                         alt="Logo"
-                        sx={{ height: 160 }}
+                        sx={{ height: 60 }}
+                        marginBottom={2}
                     />
                 </Box>
 
@@ -30,11 +58,40 @@ export default function Login() {
                 <Typography variant="h6" align="center" gutterBottom>
                     Reserva de Lockers
                 </Typography>
+
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {error}
+                    </Alert>
+                )}
+
                 <form onSubmit={handleSubmit}>
-                    <TextField fullWidth label="Usuario" margin="normal" required />
-                    <TextField fullWidth label="Contraseña" type="password" margin="normal" required />
-                    <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
-                        Entrar
+                    <TextField
+                        fullWidth
+                        label="Usuario"
+                        margin="normal"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        required
+                    />
+                    <TextField
+                        fullWidth
+                        label="Contraseña"
+                        type="password"
+                        margin="normal"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        fullWidth
+                        sx={{ mt: 2, py: 1.2 }}
+                        disabled={loading}
+                    >
+                        {loading ? <CircularProgress size={24} color="inherit" /> : "Entrar"}
                     </Button>
                 </form>
                 <Button onClick={() => navigate("/registro")} fullWidth sx={{ mt: 1 }}>

@@ -1,229 +1,240 @@
-import React, { useState, useEffect } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
+import { useEffect, useState } from "react";
+import {
+    Box,
+    Button,
+    TextField,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    IconButton,
+    Typography,
+    Paper,
+    MenuItem
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { createUbicacion, deleteUbicacion, getUbicaciones, updateUbicacion } from "../../services/UbicacionService";
 
 export default function Ubicacion() {
-  const [ubicaciones, setUbicaciones] = useState(() => {
-  const dataGuardada = localStorage.getItem("ubicaciones");
-  return dataGuardada
-    ? JSON.parse(dataGuardada)
-    : [
-        {
-          id: 1,
-          nombre: "Edificio A",
-          descripcion: "Primer piso, pasillo central",
-          pabellon: "A",
-          piso: 1,
-        },
-        {
-          id: 2,
-          nombre: "Edificio B",
-          descripcion: "Segundo piso, junto a la cafetería",
-          pabellon: "B",
-          piso: 2,
-        },
-        {
-          id: 3,
-          nombre: "Gimnasio",
-          descripcion: "Entrada principal",
-          pabellon: "A",
-          piso: 1,
-        },
-      ];
-});
+    // 1. Estado para la lista de la tabla
+    const [ubicaciones, setUbicaciones] = useState([]);
 
-  const [nombre, setNombre] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [pabellon, setPabellon] = useState("A");
-  const [piso, setPiso] = useState(1);
-  const [editId, setEditId] = useState(null);
-
- 
-  // 🟢 Guardar en localStorage cada vez que cambien las ubicaciones
-  useEffect(() => {
-    localStorage.setItem("ubicaciones", JSON.stringify(ubicaciones));
-     console.log("Guardado en localStorage:", ubicaciones);
-  }, [ubicaciones]);
-
-  const handleSubmit = (e) => {
-  e.preventDefault();
-  if (!nombre || !descripcion || !pabellon || !piso) return;
-
-  if (editId !== null) {
-    setUbicaciones((prev) =>
-      prev.map((u) =>
-        u.id === editId ? { ...u, nombre, descripcion, pabellon, piso } : u
-      )
-    );
-    setEditId(null);
-  } else {
-    // Calcula el siguiente ID correlativo
-    const nextId = ubicaciones.length > 0 ? Math.max(...ubicaciones.map(u => u.id)) + 1 : 1;
-    const nuevaUbicacion = {
-      id: nextId,
-      nombre,
-      descripcion,
-      pabellon,
-      piso,
+    // 2. Estado para el formulario (Coincide con UbicacionRequest.java)
+    const initialFormState = {
+        nombreEdificio: "", // ANTES "nombre", AHORA "nombreEdificio"
+        pabellon: "",
+        piso: "",
+        descripcion: ""
     };
-    setUbicaciones((prev) => [...prev, nuevaUbicacion]);
-  }
+    const [form, setForm] = useState(initialFormState);
 
-  setNombre("");
-  setDescripcion("");
-  setPabellon("A");
-  setPiso(1);
+    // 3. Estado para controlar si editamos o creamos
+    const [editId, setEditId] = useState(null);
+
+    // CARGAR DATOS AL INICIO
+    useEffect(() => {
+        cargarDatos();
+    }, []);
+
+    const cargarDatos = async () => {
+    try {
+        const data = await getUbicaciones();
+        console.log("Datos recibidos del backend:", data); // <--- MIRA LA CONSOLA DEL NAVEGADOR
+
+        // CASO A: Spring Boot devuelve una lista directa: [ {..}, {..} ]
+        if (Array.isArray(data)) {
+            setUbicaciones(data);
+        } 
+        // CASO B: Spring Boot devuelve Paginación: { content: [..], pageable: {..} }
+        else if (data.content && Array.isArray(data.content)) {
+            setUbicaciones(data.content);
+        }
+        // CASO C: Algún otro error u objeto vacío
+        else {
+            console.warn("El formato recibido no es una lista", data);
+            setUbicaciones([]); // Evita que rompa la pantalla
+        }
+
+    } catch (error) {
+        console.error("Error cargando ubicaciones:", error);
+        setUbicaciones([]); // En caso de error, lista vacía
+    }
 };
 
-  const handleEdit = (id) => {
-    const ubicacion = ubicaciones.find((u) => u.id === id);
-    if (!ubicacion) return;
+    // MANEJAR CAMBIOS EN INPUTS
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setForm({ ...form, [name]: value });
+    };
 
-    setEditId(ubicacion.id);
-    setNombre(ubicacion.nombre);
-    setDescripcion(ubicacion.descripcion);
-    setPabellon(ubicacion.pabellon);
-    setPiso(ubicacion.piso);
-  };
+    // GUARDAR (CREAR O EDITAR)
+    const handleSave = async () => {
+        // Validacion simple
+        if (!form.nombreEdificio || !form.pabellon || !form.piso) {
+            alert("Completa los campos obligatorios");
+            return;
+        }
 
-  const handleDelete = (id) => {
-    setUbicaciones((prev) => prev.filter((u) => u.id !== id));
-    if (editId === id) {
-      setEditId(null);
-      setNombre("");
-      setDescripcion("");
-      setPabellon("A");
-      setPiso(1);
-    }
-  };
+        try {
+            if (editId) {
+                // MODO EDICIÓN (PUT)
+                await updateUbicacion(editId, form);
+            } else {
+                // MODO CREACIÓN (POST)
+                await createUbicacion(form);
+            }
 
-  return (
-    <div className="container mt-5">
-      <div className="card shadow-lg border-0 rounded-4 bg-dark text-light">
-        <div className="card-body p-4">
-          <h2 className="text-center mb-4 text-primary">
-            <i className="bi bi-geo-alt-fill me-2"></i> Gestión de Ubicaciones de Lockers
-          </h2>
+            // Resetear formulario y recargar tabla
+            setForm(initialFormState);
+            setEditId(null);
+            cargarDatos();
+        } catch (error) {
+            console.error("Error guardando:", error);
+            alert("Error al guardar. Revisa la consola.");
+        }
+    };
 
-          {/* Formulario */}
-          <div className="border rounded-3 p-3 mb-4 bg-dark">
-            <h5 className="mb-3">
-              {editId ? "Editar Ubicación" : "Agregar Ubicación"}
-            </h5>
-            <form className="row g-3" onSubmit={handleSubmit}>
-              <div className="col-md-3">
-                <input
-                  type="text"
-                  className="form-control bg-secondary text-light"
-                  placeholder="Nombre de la ubicación"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
+    // PREPARAR EDICIÓN
+    const handleEdit = (ubicacion) => {
+        setEditId(ubicacion.id);
+        setForm({
+            nombreEdificio: ubicacion.nombreEdificio,
+            pabellon: ubicacion.pabellon,
+            piso: ubicacion.piso,
+            descripcion: ubicacion.descripcion || ""
+        });
+    };
+
+    // ELIMINAR
+    const handleDelete = async (id) => {
+        if (!window.confirm("¿Seguro de eliminar esta ubicación?")) return;
+
+        try {
+            await deleteUbicacion(id);
+            cargarDatos();
+        } catch (error) {
+            console.error("Error eliminando:", error);
+        }
+    };
+
+    return (
+        <Box p={3} sx={{ backgroundColor: "#121212", minHeight: "100vh" }}>
+            <Typography variant="h5" color="white" mb={2}>Gestión de Ubicaciones</Typography>
+
+            {/* ------------------- FORMULARIO ------------------- */}
+            <Box display="flex" flexDirection="column" gap={2} mb={3} component={Paper} sx={{ p: 2, backgroundColor: '#1e1e1e' }}>
+                <Box display="flex" gap={2} flexWrap="wrap" sx={{ width: "100%" }}>
+                    {/* OJO: El 'name' debe coincidir con la key del estado 'form' */}
+                    <TextField
+                        label="Nombre Edificio"
+                        name="nombreEdificio"
+                        value={form.nombreEdificio}
+                        onChange={handleChange}
+                        sx={{ minWidth: 300, flex: 1, input: { color: 'white' }, label: { color: 'gray' } }}
+                        variant="outlined"
+                    />
+
+                    <TextField
+                        select // <--- Esto lo convierte en dropdown
+                        label="Pabellón"
+                        name="pabellon"
+                        value={form.pabellon}
+                        onChange={handleChange}
+                        sx={{ 
+                            minWidth: 250, 
+                            flex: 1, 
+                            // Color del texto seleccionado
+                            "& .MuiSelect-select": { color: "white" },
+                            // Color del label
+                            "& .MuiInputLabel-root": { color: "gray" },
+                            // Color de la flechita del dropdown
+                            "& .MuiSvgIcon-root": { color: "white" }
+                        }}
+                    >
+                        <MenuItem value="A">Pabellón A</MenuItem>
+                        <MenuItem value="B">Pabellón B</MenuItem>
+                    </TextField>
+
+                    <TextField
+                        label="Piso"
+                        name="piso"
+                        value={form.piso}
+                        onChange={handleChange}
+                        sx={{ minWidth: 200, flex: 1, input: { color: 'white' }, label: { color: 'gray' } }}
+                    />
+                </Box>
+
+                <TextField
+                    label="Descripción"
+                    name="descripcion"
+                    multiline
+                    rows={2}
+                    value={form.descripcion}
+                    onChange={handleChange}
+                    sx={{ width: "100%", textarea: { color: 'white' }, label: { color: 'gray' } }}
                 />
-              </div>
-              <div className="col-md-3">
-                <input
-                  type="text"
-                  className="form-control bg-secondary text-light"
-                  placeholder="Descripción"
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                />
-              </div>
-              <div className="col-md-2">
-                <select
-                  className="form-control bg-secondary text-light"
-                  value={pabellon}
-                  onChange={(e) => setPabellon(e.target.value)}
-                >
-                  <option value="A">Pabellón A</option>
-                  <option value="B">Pabellón B</option>
-                </select>
-              </div>
-              <div className="col-md-2">
-                <select
-                  className="form-control bg-secondary text-light"
-                  value={piso}
-                  onChange={(e) => setPiso(Number(e.target.value))}
-                >
-                  {[...Array(15)].map((_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      Piso {i + 1}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-md-2 d-grid">
-                <button type="submit" className="btn btn-success">
-                  <i className={`bi ${editId ? "bi-pencil-square" : "bi-plus-lg"} me-1`}></i>
-                  {editId ? "Guardar" : "Agregar"}
-                </button>
-              </div>
-            </form>
-          </div>
 
-          {/* Tabla */}
-          <div className="table-responsive">
-            <table className="table table-hover align-middle table-dark text-light">
-              <thead className="table-primary">
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre</th>
-                  <th>Descripción</th>
-                  <th>Pabellón</th>
-                  <th>Piso</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ubicaciones.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center">
-                      No hay ubicaciones registradas
-                    </td>
-                  </tr>
-                ) : (
-                  ubicaciones.map((ubicacion) => (
-                    <tr key={ubicacion.id}>
-                      <td>{ubicacion.id}</td>
-                      <td>{ubicacion.nombre}</td>
-                      <td>{ubicacion.descripcion}</td>
-                      <td>
-                        <span
-                          className={`badge ${
-                            ubicacion.pabellon === "A"
-                              ? "bg-info"
-                              : "bg-warning text-dark"
-                          }`}
+                <Box display="flex" justifyContent="flex-end" gap={2}>
+                    {editId && (
+                        <Button
+                            variant="outlined"
+                            color="secondary"
+                            onClick={() => { setEditId(null); setForm(initialFormState); }}
                         >
-                          {ubicacion.pabellon}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="badge bg-secondary">{ubicacion.piso}</span>
-                      </td>
-                      <td className="text-center">
-                        <button
-                          className="btn btn-sm btn-warning me-2"
-                          onClick={() => handleEdit(ubicacion.id)}
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleDelete(ubicacion.id)}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                            Cancelar
+                        </Button>
+                    )}
+                    <Button
+                        variant="contained"
+                        onClick={handleSave}
+                        sx={{ textTransform: "none", px: 4 }}
+                    >
+                        {editId ? "Actualizar" : "Agregar"}
+                    </Button>
+                </Box>
+            </Box>
 
-        </div>
-      </div>
-    </div>
-  );
+            {/* ------------------- TABLA ------------------- */}
+            <Table sx={{ backgroundColor: "#1a1a1a" }}>
+                <TableHead>
+                    <TableRow sx={{ backgroundColor: "#333" }}>
+                        <TableCell sx={{ color: "white" }}>ID</TableCell>
+                        <TableCell sx={{ color: "white" }}>Edificio</TableCell>
+                        <TableCell sx={{ color: "white" }}>Pabellón</TableCell>
+                        <TableCell sx={{ color: "white" }}>Piso</TableCell>
+                        <TableCell sx={{ color: "white" }}>Descripción</TableCell>
+                        <TableCell sx={{ color: "white" }} align="center">Acciones</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {ubicaciones.map((u) => (
+                        <TableRow key={u.id}>
+                            <TableCell sx={{ color: "white" }}>{u.id}</TableCell>
+                            <TableCell sx={{ color: "white" }}>{u.nombreEdificio}</TableCell>
+                            <TableCell sx={{ color: "white" }}>{u.pabellon}</TableCell>
+                            <TableCell sx={{ color: "white" }}>{u.piso}</TableCell>
+                            <TableCell sx={{ color: "white" }}>{u.descripcion}</TableCell>
+                            <TableCell align="center">
+                                <IconButton color="warning" onClick={() => handleEdit(u)}>
+                                    <EditIcon />
+                                </IconButton>
+                                <IconButton color="error" onClick={() => handleDelete(u.id)}>
+                                    <DeleteIcon />
+                                </IconButton>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                    {ubicaciones.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{ color: "gray" }}>
+                                No hay ubicaciones registradas
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </Box>
+    );
 }

@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import { styled, useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import MuiDrawer from "@mui/material/Drawer";
@@ -21,15 +21,12 @@ import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded';
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
-import { Avatar, Button } from "@mui/material";
+import { Avatar, Button, CircularProgress, Dialog, DialogActions, DialogTitle } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useNavigate } from "react-router-dom";
+import { getMe, logout } from "../../lib/auth";
+import { EventAvailable } from "@mui/icons-material";
 
-const user = {
-  name: "Juan Pérez",
-  email: "juan.perez@ejemplo.com",
-  avatar: "https://img.freepik.com/psd-gratis/ilustracion-3d-avatar-o-perfil-humano_23-2150671122.jpg",
-};
 
 const drawerWidth = 240;
 
@@ -130,9 +127,61 @@ export default function LayoutAdmin({ views }) {
     { key: "lockers", label: "Lockers", icon: <Inventory2RoundedIcon /> }, // “casilleros”
     { key: "ubicacion", label: "Ubicaciones", icon: <PlaceRoundedIcon /> },
     { key: "reportes", label: "Reportes", icon: <ReportProblemRoundedIcon /> },
+    { key: "reservas", label: "Reservas", icon: <EventAvailable /> }
   ];
 
   const navigate = useNavigate();
+  const [loading, setLoading] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await logout();
+      navigate("/");
+    } catch (err) {
+      console.error("Logout error:", err);
+      navigate("/");
+    } finally {
+      setLoading(false);
+      setConfirmOpen(false);
+    }
+  };
+
+
+  // Usuario datos
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    getMe()
+      .then((data) => {
+        // Construimos la URL del avatar usando el servicio externo
+        // data trae: { userName, apellido, email, ... }
+        const fullName = `${data.userName}+${data.apellido}`;
+        const avatarUrl = `https://ui-avatars.com/api/?name=${fullName}&background=random&color=fff&size=128`;
+
+        setUser({
+          name: `${data.userName} ${data.apellido}`,
+          email: data.email,
+          avatar: avatarUrl,
+        });
+      })
+      .catch((err) => {
+        console.error("Error obteniendo usuario", err);
+        // Manejo opcional: usuario null o placeholder
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>
+        <CircularProgress size={20} />
+      </Box>
+    );
+  }
+
+  if (!user) return null;
 
   // Render principal
   return (
@@ -198,7 +247,7 @@ export default function LayoutAdmin({ views }) {
 
         <Divider />
 
-        {/* Cuenta estática pegada abajo */}
+
         <Box
           sx={{
             position: "absolute",
@@ -210,15 +259,19 @@ export default function LayoutAdmin({ views }) {
             borderColor: "divider",
           }}
         >
+
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
               gap: 1.5,
               justifyContent: open ? "flex-start" : "center",
+              // Opcional: Padding para que se vea bien en el sidebar
+              p: 2,
             }}
           >
-            <Avatar src={user.avatar} alt={user.name}>
+            <Avatar src={user.avatar} alt={user.name} sx={{ width: 40, height: 40 }}>
+              {/* Fallback si falla la imagen */}
               {!user.avatar && (user.name?.[0] || "U")}
             </Avatar>
 
@@ -241,7 +294,8 @@ export default function LayoutAdmin({ views }) {
                 size="small"
                 fullWidth
                 startIcon={<LogoutRoundedIcon />}
-                onClick={() => navigate("/")}
+                onClick={() => setConfirmOpen(true)}
+                disabled={loading}
               >
                 Cerrar sesión
               </Button>
@@ -249,14 +303,26 @@ export default function LayoutAdmin({ views }) {
               <IconButton
                 color="inherit"
                 size="small"
-                onClick={() => navigate("/")}
+                onClick={() => setConfirmOpen(true)}
                 sx={{ mx: "auto", display: "block" }}
                 aria-label="Cerrar sesión"
+                disabled={loading}
               >
                 <LogoutRoundedIcon />
               </IconButton>
             )}
           </Box>
+
+          {/* Diálogo de confirmación opcional */}
+          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+            <DialogTitle>{"¿Cerrar sesión?"}</DialogTitle>
+            <DialogActions sx={{ px: 3, pb: 2 }}>
+              <Button onClick={() => setConfirmOpen(false)} disabled={loading}>Cancelar</Button>
+              <Button onClick={handleLogout} variant="contained" disabled={loading}>
+                {loading ? <CircularProgress size={18} color="inherit" /> : "Sí, salir"}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       </Drawer>
 

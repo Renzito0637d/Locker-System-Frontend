@@ -1,198 +1,337 @@
 import React, { useState, useEffect } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Chip,
+  IconButton,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Paper,
+  Switch,
+  Tooltip,
+  CircularProgress,
+  TableContainer
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import SaveIcon from "@mui/icons-material/Save";
+import ClearIcon from "@mui/icons-material/Clear";
+import { getAllUsers, createUser, updateUser, deleteUser, toggleUserActive } from "../../services/UserService";
 
 export default function Users() {
-  // Cargar usuarios desde localStorage al iniciar
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem("users");
-    return saved
-      ? JSON.parse(saved)
-      : [
-          { id: 1, nombre: "Juan", apellido: "Zarate", correo: "juan@correo.com", rol: "Admin" },
-          { id: 2, nombre: "María", apellido: "Vargas", correo: "maria@correo.com", rol: "Usuario" },
-          { id: 3, nombre: "Carlos", apellido: "Repudio", correo: "carlos@correo.com", rol: "Usuario" },
-        ];
-  });
+  // Estados de datos
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Guardar en localStorage cuando cambie users
-  useEffect(() => {
-    localStorage.setItem("users", JSON.stringify(users));
-  }, [users]);
-
-  const [nombre, setNombre] = useState("");
-  const [apellido, setApellido] = useState("");
-  const [correo, setCorreo] = useState("");
-  const [rol, setRol] = useState("Usuario");
-  const [editId, setEditId] = useState(null);
-
-const handleSubmit = (e) => {
-  e.preventDefault();
-  if (!nombre || !apellido || !correo) return;
-
-  if (editId !== null) {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === editId ? { ...u, nombre, apellido, correo, rol } : u
-      )
-    );
-    setEditId(null);
-  } else {
-    // Calcula el siguiente ID correlativo
-    const nextId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
-    const newUser = {
-      id: nextId,
-      nombre,
-      apellido,
-      correo,
-      rol,
-    };
-    setUsers((prev) => [...prev, newUser]);
-  }
-
-  setNombre("");
-  setApellido("");
-  setCorreo("");
-  setRol("Usuario");
-};
-  const handleEdit = (id) => {
-    const user = users.find((u) => u.id === id);
-    if (!user) return;
-    setEditId(user.id);
-    setNombre(user.nombre);
-    setApellido(user.apellido);
-    setCorreo(user.correo);
-    setRol(user.rol);
+  // Estado del Formulario
+  const initialForm = {
+    id: null,
+    userName: "",
+    nombre: "",
+    apellido: "",
+    email: "",
+    password: "", // Solo se usa al crear o cambiar
+    role: "ESTUDIANTE" // Valor por defecto
   };
+  const [form, setForm] = useState(initialForm);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const handleDelete = (id) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    if (editId === id) {
-      setEditId(null);
-      setNombre("");
-      setApellido("");
-      setCorreo("");
-      setRol("Usuario");
+  useEffect(() => {
+    cargarUsuarios();
+  }, []);
+
+  const cargarUsuarios = async () => {
+    setLoading(true);
+    try {
+      const data = await getAllUsers();
+      // Validación defensiva por si el backend devuelve null
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error cargando usuarios", error);
+      setUsers([]);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Manejar inputs del formulario
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+  };
+
+  // Guardar (Crear o Editar)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      if (isEditing) {
+        // EDITAR
+        // Si el password está vacío, lo quitamos del objeto para no sobreescribirlo con vacío
+        const payload = { ...form };
+        if (!payload.password) delete payload.password;
+
+        await updateUser(form.id, payload);
+        alert("Usuario actualizado correctamente");
+      } else {
+        // CREAR
+        if (!form.password) {
+          alert("La contraseña es obligatoria para nuevos usuarios");
+          return;
+        }
+        await createUser(form);
+        alert("Usuario creado correctamente");
+      }
+
+      // Resetear y recargar
+      resetForm();
+      cargarUsuarios();
+    } catch (error) {
+      console.error("Error al guardar:", error);
+      alert("Error al guardar (Revisa si el usuario/email ya existe)");
+    }
+  };
+
+  const handleEdit = (user) => {
+    // Extraer el rol principal del Set de roles
+    const roleName = user.roles && user.roles.length > 0 ? user.roles[0] : "ESTUDIANTE";
+
+    setForm({
+      id: user.id,
+      userName: user.userName,
+      nombre: user.nombre,
+      apellido: user.apellido,
+      email: user.email || "",
+      password: "", // No traemos el hash por seguridad, se deja vacío
+      role: roleName
+    });
+    setIsEditing(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.")) return;
+    try {
+      await deleteUser(id);
+      setUsers(users.filter(u => u.id !== id));
+    } catch (error) {
+      console.error(error);
+      alert("Error al eliminar usuario");
+    }
+  };
+
+  const handleToggleActive = async (id) => {
+    try {
+      await toggleUserActive(id);
+      // Actualizar estado local
+      setUsers(users.map(u => u.id === id ? { ...u, active: !u.active } : u));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const resetForm = () => {
+    setForm(initialForm);
+    setIsEditing(false);
+  };
+
+  if (loading) return <Box p={4} display="flex" justifyContent="center"><CircularProgress /></Box>;
+
   return (
-    <div className="container mt-5">
-      <div className="card shadow-lg border-0 rounded-4 bg-dark text-light">
-        <div className="card-body p-4">
-          <h2 className="text-center mb-4 text-primary">
-            <i className="bi bi-people-fill me-2"></i> Gestión de Usuarios
-          </h2>
+    <Box sx={{ p: 3, backgroundColor: "#121212", minHeight: "100vh" }}>
+      <Typography variant="h4" color="white" gutterBottom sx={{ mb: 3, fontWeight: 'bold' }}>
+        Gestión de Usuarios
+      </Typography>
 
-          {/* Formulario */}
-          <div className="border rounded-3 p-3 mb-4 bg-dark">
-            <h5 className="mb-3">
-              {editId ? "Editar Usuario" : ""}
-            </h5>
-            <form className="row g-3" onSubmit={handleSubmit}>
-              <div className="col-md-3">
-                <input
-                  type="text"
-                  className="form-control bg-secondary text-light"
-                  placeholder="Nombre"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                />
-              </div>
-              <div className="col-md-3">
-                <input
-                  type="text"
-                  className="form-control bg-secondary text-light"
-                  placeholder="Apellido"
-                  value={apellido}
-                  onChange={(e) => setApellido(e.target.value)}
-                />
-              </div>
-              <div className="col-md-3">
-                <input
-                  type="email"
-                  className="form-control bg-secondary text-light"
-                  placeholder="Correo"
-                  value={correo}
-                  onChange={(e) => setCorreo(e.target.value)}
-                />
-              </div>
-              <div className="col-md-2">
-                <select
-                  className="form-control bg-secondary text-light"
-                  value={rol}
-                  onChange={(e) => setRol(e.target.value)}
+      <Card elevation={3} sx={{ backgroundColor: "#1e1e1e", color: "white", mb: 4 }}>
+        <CardContent>
+          <Typography variant="h6" color="primary" gutterBottom>
+            {isEditing ? "Editar Usuario" : "Registrar Nuevo Usuario"}
+          </Typography>
+
+          {/* FORMULARIO */}
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+          >
+            <Box display="flex" gap={2} flexWrap="wrap">
+              <TextField
+                label="Usuario (Login)"
+                name="userName"
+                value={form.userName}
+                onChange={handleChange}
+                variant="filled"
+                required
+                disabled={isEditing} // A veces el username no se debe cambiar
+                sx={{ backgroundColor: "#2a2a2a", input: { color: "white" }, minWidth: 200, flex: 1 }}
+                InputLabelProps={{ sx: { color: "#aaa" } }}
+              />
+              <TextField
+                label="Nombre"
+                name="nombre"
+                value={form.nombre}
+                onChange={handleChange}
+                variant="filled"
+                required
+                sx={{ backgroundColor: "#2a2a2a", input: { color: "white" }, minWidth: 200, flex: 1 }}
+                InputLabelProps={{ sx: { color: "#aaa" } }}
+              />
+              <TextField
+                label="Apellido"
+                name="apellido"
+                value={form.apellido}
+                onChange={handleChange}
+                variant="filled"
+                required
+                sx={{ backgroundColor: "#2a2a2a", input: { color: "white" }, minWidth: 200, flex: 1 }}
+                InputLabelProps={{ sx: { color: "#aaa" } }}
+              />
+            </Box>
+
+            <Box display="flex" gap={2} flexWrap="wrap">
+              <TextField
+                label="Correo Electrónico"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                variant="filled"
+                required
+                sx={{ backgroundColor: "#2a2a2a", input: { color: "white" }, minWidth: 250, flex: 2 }}
+                InputLabelProps={{ sx: { color: "#aaa" } }}
+              />
+
+              {/* Campo Password: Obligatorio al crear, opcional al editar */}
+              <TextField
+                label={isEditing ? "Nueva Contraseña (Opcional)" : "Contraseña"}
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                variant="filled"
+                required={!isEditing}
+                sx={{ backgroundColor: "#2a2a2a", input: { color: "white" }, minWidth: 200, flex: 1 }}
+                InputLabelProps={{ sx: { color: "#aaa" } }}
+              />
+
+              <FormControl variant="filled" sx={{ minWidth: 150, backgroundColor: "#2a2a2a", flex: 1 }}>
+                <InputLabel sx={{ color: "#aaa" }}>Rol</InputLabel>
+                <Select
+                  name="role"
+                  value={form.role}
+                  onChange={handleChange}
+                  sx={{ color: "white" }}
                 >
-                  <option value="Admin">Admin</option>
-                  <option value="Usuario">Usuario</option>
-                </select>
-              </div>
-              <div className="col-md-1 d-grid">
-                <button type="submit" className="btn btn-success">
-                  <i className="bi bi-save"></i>
-                </button>
-              </div>
-            </form>
-          </div>
+                  <MenuItem value="ADMIN">Administrador</MenuItem>
+                  <MenuItem value="ESTUDIANTE">Estudiante</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
 
-          {/* Tabla */}
-          <div className="table-responsive">
-            <table className="table table-hover align-middle table-dark text-light">
-              <thead className="table-primary">
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre</th>
-                  <th>Apellido</th>
-                  <th>Correo</th>
-                  <th>Rol</th>
-                  <th className="text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center">
-                      No hay usuarios registrados
-                    </td>
-                  </tr>
-                ) : (
-                  users.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.id}</td>
-                      <td>{user.nombre}</td>
-                      <td>{user.apellido}</td>
-                      <td>{user.correo}</td>
-                      <td>
-                        <span
-                          className={`badge px-3 py-2 ${
-                            user.rol === "Admin" ? "bg-primary" : "bg-secondary"
-                          }`}
-                        >
-                          {user.rol}
-                        </span>
-                      </td>
-                      <td className="text-center">
-                        <button
-                          className="btn btn-sm btn-warning me-2"
-                          onClick={() => handleEdit(user.id)}
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => handleDelete(user.id)}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
+            <Box display="flex" gap={2} justifyContent="flex-end" mt={1}>
+              {isEditing && (
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<ClearIcon />}
+                  onClick={resetForm}
+                >
+                  Cancelar Edición
+                </Button>
+              )}
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<SaveIcon />}
+                color="primary"
+                sx={{ px: 4 }}
+              >
+                {isEditing ? "Actualizar Usuario" : "Guardar Usuario"}
+              </Button>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* TABLA */}
+      <TableContainer component={Paper} sx={{ backgroundColor: "#1a1a1a" }}>
+        <Table>
+          <TableHead sx={{ backgroundColor: "#333" }}>
+            <TableRow>
+              <TableCell sx={{ color: "white", fontWeight: 'bold' }}>ID</TableCell>
+              <TableCell sx={{ color: "white", fontWeight: 'bold' }}>Usuario</TableCell>
+              <TableCell sx={{ color: "white", fontWeight: 'bold' }}>Nombre Completo</TableCell>
+              <TableCell sx={{ color: "white", fontWeight: 'bold' }}>Correo</TableCell>
+              <TableCell sx={{ color: "white", fontWeight: 'bold' }}>Rol</TableCell>
+              <TableCell sx={{ color: "white", fontWeight: 'bold' }}>Estado</TableCell>
+              <TableCell sx={{ color: "white", fontWeight: 'bold' }} align="center">Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ color: "gray", py: 3 }}>
+                  No hay usuarios registrados
+                </TableCell>
+              </TableRow>
+            ) : (
+              users.map((user) => (
+                <TableRow key={user.id} hover sx={{ '&:hover': { backgroundColor: '#252525' } }}>
+                  <TableCell sx={{ color: "white" }}>{user.id}</TableCell>
+                  <TableCell sx={{ color: "white" }}>{user.userName}</TableCell>
+                  <TableCell sx={{ color: "white" }}>{user.nombre} {user.apellido}</TableCell>
+                  <TableCell sx={{ color: "white" }}>{user.email}</TableCell>
+                  <TableCell>
+                    {user.roles && user.roles.map(rol => (
+                      <Chip
+                        key={rol}
+                        label={rol}
+                        size="small"
+                        color={rol === "ADMIN" ? "warning" : "info"}
+                        sx={{ mr: 0.5 }}
+                      />
+                    ))}
+                  </TableCell>
+                  <TableCell>
+                    {/* Switch para activar/desactivar */}
+                    <Tooltip title={user.active ? "Usuario Activo" : "Usuario Inactivo"}>
+                      <Switch
+                        checked={user.active}
+                        onChange={() => handleToggleActive(user.id)}
+                        color="success"
+                      />
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Tooltip title="Editar">
+                      <IconButton color="primary" onClick={() => handleEdit(user)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar definitivamente">
+                      <IconButton color="error" onClick={() => handleDelete(user.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 }
+

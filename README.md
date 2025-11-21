@@ -61,12 +61,12 @@ La app se abrirá en http://localhost:3000
 | RF07 |El sistema debe asignar un locker disponible al usuario y cambiar el estado del locker a “ocupado”. |:heavy_check_mark:|
 | RF08   |El sistema debe permitir que un usuario libere un locker cuando ya no lo use. |:heavy_check_mark:|
 | RF09   |El sistema debe actualizar el estado del locker a “disponible” una vez liberado. |:heavy_check_mark:|
-| RF10   |El sistema debe permitir al administrador hacer un mantenimiento de los usuarios.|:alarm_clock:|
+| RF10   |El sistema debe permitir al administrador hacer un mantenimiento de los usuarios.|:heavy_check_mark:|
 | RF11   | El sistema debe permitir iniciar sesión y autenticarse según el rol del usuario. |:heavy_check_mark:|
 | RF12   |  El sistema debe proteger el acceso a funciones administrativas mediante autenticación y autorización. |:heavy_check_mark:|
 | RF13   | Los usuarios deben poder ver los lockers asignados a ellos. |:heavy_check_mark:|
-| RF14   | El sistema debe mostrar las reservas del locker del usuario.|:alarm_clock:|
-| RF15   | Los usuarios deben poder reportar (mantenimiento) problemas o fallas en un locker. |:alarm_clock:|
-| RF16   | El sistema debe poder hacer informes del reporte de lockers a mantenimiento.|:alarm_clock:|
-| RF17   | Los administradores deben poder actualizar el estado de la orden de mantenimiento (pendiente, en proceso, resuelto) del reporte. |:alarm_clock:|
+| RF14   | El sistema debe mostrar las reservas del locker del usuario.|:heavy_check_mark:|
+| RF15   | Los usuarios deben poder reportar (mantenimiento) problemas o fallas en un locker. |:heavy_check_mark:|
+| RF16   | El sistema debe poder hacer informes del reporte de lockers a mantenimiento.|:heavy_check_mark:|
+| RF17   | Los administradores deben poder actualizar el estado de la orden de mantenimiento (pendiente, en proceso, resuelto) del reporte. |:heavy_check_mark:|
 

@@ -12,6 +12,16 @@ App web frontend para un sistema de lockers para la UTP sede norte que permita a
 
 ---
 
+El backend de esta aplicación se encuentra en un repositorio separado: [Link al repositorio del Frontend](https://github.com/Renzito0637d/Locker-System-Backend)
+
+
+## Proyecto desplegado en render:
+- **Frontend**: https://locker-system-frontend.onrender.com 
+- **Backend**: https://locker-system-backendv2.onrender.com 
+
+Esperar a que los servidores enciendan por completo.
+
+
 # 🚀 Instrucciones para clonar y ejecutar el proyecto React
 
 ### 1. Clonar el repositorio

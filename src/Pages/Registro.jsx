@@ -5,8 +5,8 @@ import { registerEstudiante } from "../lib/auth";
 
 export default function Registro() {
     const navigate = useNavigate();
-    
-    // 1. Estado para los datos del formulario
+
+    // 1. Estado para los datos del formulario (lo que se envía al backend)
     const [formData, setFormData] = useState({
         nombre: '',
         apellido: '',
@@ -15,9 +15,12 @@ export default function Registro() {
         password: ''
     });
 
+    // 2. NUEVO ESTADO: Para el campo de confirmar contraseña
+    const [confirmPassword, setConfirmPassword] = useState('');
+
     const [error, setError] = useState(null);
 
-    // 2. Manejar cambios en los inputs
+    // Manejar cambios en los inputs del formulario principal
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -30,15 +33,21 @@ export default function Registro() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
-        
+
+        // --- NUEVA VALIDACIÓN ---
+        if (formData.password !== confirmPassword) {
+            setError("Las contraseñas no coinciden. Por favor verifícalas.");
+            return; // Detenemos la función aquí, no se envía nada al backend
+        }
+        // ------------------------
+
         try {
             await registerEstudiante(formData);
             // Si es exitoso, redirigir al login
             alert("Registro exitoso. Por favor inicia sesión.");
-            navigate("/"); 
+            navigate("/");
         } catch (err) {
             console.error(err);
-            // Manejo básico de error (puedes mejorarlo según la respuesta de tu backend)
             setError("Error al registrar. Verifica los datos o intenta más tarde.");
         }
     };
@@ -53,43 +62,58 @@ export default function Registro() {
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <form onSubmit={handleSubmit}>
-                    <TextField 
-                        label="Nombre" 
+                    <TextField
+                        label="Nombre"
                         name="nombre"
                         value={formData.nombre}
                         onChange={handleChange}
-                        fullWidth margin="normal" required 
+                        fullWidth margin="normal" required
                     />
-                    <TextField 
-                        label="Apellido" 
+                    <TextField
+                        label="Apellido"
                         name="apellido"
                         value={formData.apellido}
                         onChange={handleChange}
-                        fullWidth margin="normal" required 
+                        fullWidth margin="normal" required
                     />
-                    <TextField 
-                        label="Correo universitario" 
-                        name="email" // Debe coincidir con el DTO de Java
-                        type="email" 
+                    <TextField
+                        label="Correo universitario"
+                        name="email"
+                        type="email"
                         value={formData.email}
                         onChange={handleChange}
-                        fullWidth margin="normal" required 
+                        fullWidth margin="normal" required
                     />
-                    <TextField 
-                        label="Usuario" 
+                    <TextField
+                        label="Usuario"
                         name="userName"
                         value={formData.userName}
                         onChange={handleChange}
-                        fullWidth margin="normal" required 
+                        fullWidth margin="normal" required
                     />
-                    <TextField 
-                        label="Contraseña" 
+
+                    {/* Input de Contraseña Original */}
+                    <TextField
+                        label="Contraseña"
                         name="password"
-                        type="password" 
+                        type="password"
                         value={formData.password}
                         onChange={handleChange}
-                        fullWidth margin="normal" required 
+                        fullWidth margin="normal" required
                     />
+
+                    {/* --- NUEVO INPUT: Confirmar Contraseña --- */}
+                    <TextField
+                        label="Confirmar Contraseña"
+                        type="password"
+                        value={confirmPassword}
+                        // Actualizamos directamente el estado local, no el formData
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        fullWidth margin="normal" required
+                        error={confirmPassword !== "" && formData.password !== confirmPassword} // Pone el borde rojo si escriben y no coinciden
+                        helperText={confirmPassword !== "" && formData.password !== confirmPassword ? "No coinciden" : ""}
+                    />
+
                     <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
                         Registrar
                     </Button>

@@ -149,7 +149,7 @@ export default function ReportarIncidencia() {
   if (loading) return <Box display="flex" justifyContent="center" mt={5}><CircularProgress /></Box>;
 
   return (
-    <Box sx={{ p: 3, margin: "0 auto" }}>
+    <Box sx={{ margin: "0 auto" }}>
       <Typography variant="h4" gutterBottom fontWeight="bold">
         Reportar Incidencia
       </Typography>

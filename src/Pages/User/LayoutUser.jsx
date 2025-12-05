@@ -19,7 +19,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
 import ReportProblemRoundedIcon from '@mui/icons-material/ReportProblemRounded';
-import { Avatar, Button, CircularProgress, Dialog, DialogActions, DialogTitle } from "@mui/material";
+import { Avatar, Button, CircularProgress, Dialog, DialogActions, DialogTitle, useMediaQuery } from "@mui/material";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import PlaceRoundedIcon from '@mui/icons-material/PlaceRounded';
 import { EventAvailable } from "@mui/icons-material";
@@ -27,6 +27,7 @@ import { getMe, logout } from "../../lib/auth";
 
 const drawerWidth = 240;
 
+// --- ESTILOS SOLO PARA ESCRITORIO (ANIMACIONES) ---
 const openedMixin = (theme) => ({
   width: drawerWidth,
   transition: theme.transitions.create("width", {
@@ -56,79 +57,70 @@ const DrawerHeader = styled("div")(({ theme }) => ({
   ...theme.mixins.toolbar,
 }));
 
+// AppBar que solo se mueve en escritorio
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
-})(({ theme }) => ({
+})(({ theme, open }) => ({
   zIndex: theme.zIndex.drawer + 1,
   transition: theme.transitions.create(["width", "margin"], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
-  variants: [
-    {
-      props: ({ open }) => open,
-      style: {
-        marginLeft: drawerWidth,
-        width: `calc(100% - ${drawerWidth}px)`,
-        transition: theme.transitions.create(["width", "margin"], {
-          easing: theme.transitions.easing.sharp,
-          duration: theme.transitions.duration.enteringScreen,
-        }),
-      },
-    },
-  ],
+  ...(open && {
+    marginLeft: drawerWidth,
+    width: `calc(100% - ${drawerWidth}px)`,
+    transition: theme.transitions.create(["width", "margin"], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  }),
 }));
 
-const Drawer = styled(MuiDrawer, {
-  shouldForwardProp: (prop) => prop !== "open",
-})(({ theme }) => ({
-  width: drawerWidth,
-  flexShrink: 0,
-  whiteSpace: "nowrap",
-  boxSizing: "border-box",
-  variants: [
-    {
-      props: ({ open }) => open,
-      style: {
-        ...openedMixin(theme),
-        "& .MuiDrawer-paper": openedMixin(theme),
-      },
-    },
-    {
-      props: ({ open }) => !open,
-      style: {
-        ...closedMixin(theme),
-        "& .MuiDrawer-paper": closedMixin(theme),
-      },
-    },
-  ],
-}));
+// Drawer Desktop (Con animación)
+const DesktopDrawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== "open" })(
+  ({ theme, open }) => ({
+    width: drawerWidth,
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+    boxSizing: "border-box",
+    ...(open && {
+      ...openedMixin(theme),
+      "& .MuiDrawer-paper": openedMixin(theme),
+    }),
+    ...(!open && {
+      ...closedMixin(theme),
+      "& .MuiDrawer-paper": closedMixin(theme),
+    }),
+  })
+);
 
-
-
-/**
- * Menu del USUARIO para navegar entre componentes
- */
 export default function LayoutUser({ viewsUser }) {
   const theme = useTheme();
-  const [open, setOpen] = React.useState(false);
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm")); // Detectar si es celular
 
-  // clave actual (vista1 | vista2 | vista3)
-  const [currentView, setCurrentView] = React.useState("mislockers");
+  // Estados separados
+  const [mobileOpen, setMobileOpen] = useState(false); // Para el drawer temporal (celular)
+  const [desktopOpen, setDesktopOpen] = useState(true); // Para el drawer fijo (PC)
 
-  const handleDrawerOpen = () => setOpen(true);
-  const handleDrawerClose = () => setOpen(false);
-
-  // Opciones del menú
-  const menuItems = [
-    { key: "mislockers", label: "Mis Lockers", icon: <Inventory2RoundedIcon /> },
-    { key: "reservas", label: "Reservar locker", icon: <EventAvailable /> },
-    { key: "misreportes", label: "Reportar locker", icon: <ReportProblemRoundedIcon /> },
-    { key: "ubicaciones", label: "Ubicaciones de lockers", icon: <PlaceRoundedIcon /> }
-  ];
-
+  const [currentView, setCurrentView] = useState("mislockers");
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const navigate = useNavigate();
-  const [confirmOpen, setConfirmOpen] = React.useState(false);
+
+  // --- HANDLERS ---
+  const handleDrawerToggle = () => {
+    if (isMobile) {
+      setMobileOpen(!mobileOpen);
+    } else {
+      setDesktopOpen(!desktopOpen);
+    }
+  };
+
+  const handleMenuClick = (key) => {
+    setCurrentView(key);
+    if (isMobile) setMobileOpen(false); // Cerrar menú en celular al hacer click
+  };
 
   const handleLogout = async () => {
     setLoading(true);
@@ -144,28 +136,18 @@ export default function LayoutUser({ viewsUser }) {
     }
   };
 
-  // Usuario datos
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     getMe()
       .then((data) => {
-        // Construimos la URL del avatar usando el servicio externo
-        // data trae: { userName, apellido, email, ... }
         const fullName = `${data.userName}+${data.apellido}`;
         const avatarUrl = `https://ui-avatars.com/api/?name=${fullName}&background=random&color=fff&size=128`;
-
         setUser({
           name: `${data.userName} ${data.apellido}`,
           email: data.email,
           avatar: avatarUrl,
         });
       })
-      .catch((err) => {
-        console.error("Error obteniendo usuario", err);
-        // Manejo opcional: usuario null o placeholder
-      })
+      .catch((err) => console.error("Error obteniendo usuario", err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -179,22 +161,120 @@ export default function LayoutUser({ viewsUser }) {
 
   if (!user) return null;
 
-  // Render principal
+  const menuItems = [
+    { key: "mislockers", label: "Mis Lockers", icon: <Inventory2RoundedIcon /> },
+    { key: "reservas", label: "Reservar locker", icon: <EventAvailable /> },
+    { key: "misreportes", label: "Reportar locker", icon: <ReportProblemRoundedIcon /> },
+    { key: "ubicaciones", label: "Ubicaciones de lockers", icon: <PlaceRoundedIcon /> }
+  ];
+
+  // --- CONTENIDO COMÚN DEL DRAWER ---
+  // Extraemos esto para usarlo tanto en el MobileDrawer como en el DesktopDrawer
+  const drawerContent = (isOpenOrMobile) => (
+    <>
+      <DrawerHeader>
+        {/* Solo mostramos el botón de cerrar en Desktop cuando está abierto */}
+        {!isMobile && (
+          <IconButton onClick={handleDrawerToggle}>
+            {theme.direction === "rtl" ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </IconButton>
+        )}
+        {/* En móvil, a veces se pone el logo o título aquí */}
+        {isMobile && <Typography variant="subtitle1" sx={{ width: '100%', textAlign: 'center', fontWeight: 'bold' }}>MENÚ</Typography>}
+      </DrawerHeader>
+
+      <Divider />
+
+      <List>
+        {menuItems.map(({ key, label, icon }) => (
+          <ListItem key={key} disablePadding sx={{ display: "block" }}>
+            <ListItemButton
+              onClick={() => handleMenuClick(key)}
+              selected={currentView === key}
+              sx={[
+                { minHeight: 48, px: 2.5 },
+                isOpenOrMobile ? { justifyContent: "initial" } : { justifyContent: "center" },
+              ]}
+            >
+              <ListItemIcon
+                sx={[
+                  { minWidth: 0, justifyContent: "center" },
+                  isOpenOrMobile ? { mr: 3 } : { mr: "auto" },
+                ]}
+              >
+                {icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={label}
+                sx={[isOpenOrMobile ? { opacity: 1 } : { opacity: 0 }]}
+              />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+
+      <Divider />
+
+      <Box
+        sx={{
+          position: "absolute",
+          left: 0, right: 0, bottom: 0,
+          p: 2,
+          borderTop: 1, borderColor: "divider",
+          backgroundColor: "background.paper"
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, justifyContent: isOpenOrMobile ? "flex-start" : "center", mb: 1 }}>
+          <Avatar src={user.avatar} alt={user.name} sx={{ width: 40, height: 40 }}>
+            {!user.avatar && (user.name?.[0] || "U")}
+          </Avatar>
+          {isOpenOrMobile && (
+            <Box sx={{ minWidth: 0, overflow: "hidden" }}>
+              <Typography variant="body1" fontWeight={600} noWrap>{user.name}</Typography>
+              <Typography variant="body2" color="text.secondary" noWrap>{user.email}</Typography>
+            </Box>
+          )}
+        </Box>
+        <Box sx={{ display: "flex", justifyContent: isOpenOrMobile ? "flex-start" : "center" }}>
+          {isOpenOrMobile ? (
+            <Button variant="outlined" size="small" fullWidth startIcon={<LogoutRoundedIcon />} onClick={() => setConfirmOpen(true)}>
+              Cerrar sesión
+            </Button>
+          ) : (
+            <IconButton color="inherit" size="small" onClick={() => setConfirmOpen(true)}>
+              <LogoutRoundedIcon />
+            </IconButton>
+          )}
+        </Box>
+      </Box>
+    </>
+  );
+
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
 
-      <AppBar position="fixed" open={open}>
+      {/* APP BAR */}
+      <AppBar
+        position="fixed"
+        open={desktopOpen} // En escritorio, reacciona a desktopOpen
+        sx={{
+          // En móvil, el AppBar SIEMPRE ocupa el 100% (no le afecta la prop open del styled component de escritorio)
+          width: { xs: '100%', sm: desktopOpen ? `calc(100% - ${drawerWidth}px)` : `calc(100% - calc(${theme.spacing(8)} + 1px))` },
+          ml: { xs: 0, sm: desktopOpen ? `${drawerWidth}px` : `calc(${theme.spacing(8)} + 1px)` }
+        }}
+      >
         <Toolbar>
           <IconButton
             color="inherit"
             aria-label="open drawer"
-            onClick={handleDrawerOpen}
+            onClick={handleDrawerToggle}
             edge="start"
-            sx={[
-              { marginRight: 5 },
-              open && { display: "none" },
-            ]}
+            sx={{
+              marginRight: 5,
+              // Ocultar botón menú SÓLO en escritorio cuando está abierto
+              display: { xs: 'block', sm: desktopOpen ? 'none' : 'block' }
+            }}
           >
             <MenuIcon />
           </IconButton>
@@ -204,133 +284,51 @@ export default function LayoutUser({ viewsUser }) {
         </Toolbar>
       </AppBar>
 
-      <Drawer variant="permanent" open={open}>
-        <DrawerHeader>
-          <IconButton onClick={handleDrawerClose}>
-            {theme.direction === "rtl" ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-          </IconButton>
-        </DrawerHeader>
+      {/* DRAWER 1: MÓVIL (Temporary) */}
+      <MuiDrawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{ keepMounted: true }} // Mejor rendimiento en móvil
+        sx={{
+          display: { xs: "block", sm: "none" }, // SOLO visible en XS
+          "& .MuiDrawer-paper": { boxSizing: "border-box", width: drawerWidth },
+        }}
+      >
+        {/* En móvil siempre pasamos true porque siempre se ve expandido */}
+        {drawerContent(true)}
+      </MuiDrawer>
 
-        <Divider />
+      {/* DRAWER 2: ESCRITORIO (Permanent + Animated) */}
+      <DesktopDrawer
+        variant="permanent"
+        open={desktopOpen}
+        sx={{
+          display: { xs: "none", sm: "block" }, // SOLO visible en SM o superior
+        }}
+      >
+        {/* En escritorio pasamos el estado real para saber si ocultar textos */}
+        {drawerContent(desktopOpen)}
+      </DesktopDrawer>
 
-        <List>
-          {menuItems.map(({ key, label, icon }) => (
-            <ListItem key={key} disablePadding sx={{ display: "block" }}>
-              <ListItemButton
-                onClick={() => setCurrentView(key)}
-                selected={currentView === key}
-                sx={[
-                  { minHeight: 48, px: 2.5 },
-                  open ? { justifyContent: "initial" } : { justifyContent: "center" },
-                ]}
-              >
-                <ListItemIcon
-                  sx={[
-                    { minWidth: 0, justifyContent: "center" },
-                    open ? { mr: 3 } : { mr: "auto" },
-                  ]}
-                >
-                  {icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={label}
-                  sx={[open ? { opacity: 1 } : { opacity: 0 }]}
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-
-        <Divider />
-
-
-        <Box
-          sx={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            p: 2,
-            borderTop: 1,
-            borderColor: "divider",
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              justifyContent: open ? "flex-start" : "center",
-              // Opcional: Padding para que se vea bien en el sidebar
-              p: 2,
-            }}
-          >
-            <Avatar src={user.avatar} alt={user.name} sx={{ width: 40, height: 40 }}>
-              {/* Fallback si falla la imagen */}
-              {!user.avatar && (user.name?.[0] || "U")}
-            </Avatar>
-
-            {open && (
-              <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body1" fontWeight={600} noWrap>
-                  {user.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" noWrap>
-                  {user.email}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-
-          <Box sx={{ mt: 1.5, display: "flex", gap: 1 }}>
-            {open ? (
-              <Button
-                variant="outlined"
-                size="small"
-                fullWidth
-                startIcon={<LogoutRoundedIcon />}
-                onClick={() => setConfirmOpen(true)}
-                disabled={loading}
-              >
-                Cerrar sesión
-              </Button>
-            ) : (
-              <IconButton
-                color="inherit"
-                size="small"
-                onClick={() => setConfirmOpen(true)}
-                sx={{ mx: "auto", display: "block" }}
-                aria-label="Cerrar sesión"
-                disabled={loading}
-              >
-                <LogoutRoundedIcon />
-              </IconButton>
-            )}
-          </Box>
-
-          {/* Diálogo de confirmación opcional */}
-          <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-            <DialogTitle>{"¿Cerrar sesión?"}</DialogTitle>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
-              <Button onClick={() => setConfirmOpen(false)} disabled={loading}>Cancelar</Button>
-              <Button onClick={handleLogout} variant="contained" disabled={loading}>
-                {loading ? <CircularProgress size={18} color="inherit" /> : "Sí, salir"}
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </Box>
-      </Drawer>
-
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      {/* CONTENIDO PRINCIPAL */}
+      <Box component="main" sx={{ flexGrow: 1, p: 3, width: "100%" }}>
         <DrawerHeader />
-        {/* Contenido dinámico según la vista */}
         {viewsUser?.[currentView] ?? (
-          <Typography color="text.secondary">
-            Selecciona una vista desde el menú.
-          </Typography>
+          <Typography color="text.secondary">Selecciona una vista.</Typography>
         )}
       </Box>
+
+      {/* DIALOGO LOGOUT */}
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>{"¿Cerrar sesión?"}</DialogTitle>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setConfirmOpen(false)} disabled={loading}>Cancelar</Button>
+          <Button onClick={handleLogout} variant="contained" disabled={loading}>
+            {loading ? <CircularProgress size={18} color="inherit" /> : "Sí, salir"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
-
 }

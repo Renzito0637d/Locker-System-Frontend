@@ -148,7 +148,7 @@ export default function Users() {
   if (loading) return <Box p={4} display="flex" justifyContent="center"><CircularProgress /></Box>;
 
   return (
-    <Box sx={{ p: 3, backgroundColor: "#121212", minHeight: "100vh" }}>
+    <Box sx={{  backgroundColor: "#121212", minHeight: "100vh" }}>
       <Typography variant="h4" color="white" gutterBottom sx={{ mb: 3, fontWeight: 'bold' }}>
         Gestión de Usuarios
       </Typography>

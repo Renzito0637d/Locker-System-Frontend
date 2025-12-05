@@ -149,7 +149,7 @@ export default function ReportesAdmin() {
   if (loading) return <Box p={4} display="flex" justifyContent="center"><CircularProgress /></Box>;
 
   return (
-    <Box sx={{ p: 3, minHeight: "100vh" }}>
+    <Box sx={{ minHeight: "100vh" }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
         Gestión de Incidencias y Reportes
       </Typography>

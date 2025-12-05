@@ -17,6 +17,8 @@ import {
   FormControl,
   InputLabel,
   Chip,
+  TableContainer,
+  Paper,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -115,10 +117,11 @@ export default function Lockers() {
   });
 
   return (
-    <Box sx={{ p: 4, backgroundColor: "#121212", minHeight: "100vh" }}>
+    // CAMBIO 1: Padding dinámico (menos padding en móvil)
+    <Box sx={{ p: { xs: 0, md: 4 }, backgroundColor: "#121212", minHeight: "100vh" }}>
       <Card elevation={0} sx={{ backgroundColor: "#1e1e1e", color: "white" }}>
         <CardContent>
-          <Typography variant="h4" color="primary" mb={3}>
+          <Typography variant="h4" color="primary" mb={3} sx={{ fontSize: { xs: "1.5rem", md: "2.125rem" } }}>
             Gestión de Lockers
           </Typography>
 
@@ -126,19 +129,29 @@ export default function Lockers() {
           <Box
             component="form"
             onSubmit={handleSubmit}
-            sx={{ display: "flex", gap: 2, mb: 4 }}
+            sx={{
+              display: "flex",
+              // CAMBIO 2: Columna en móvil (xs), Fila en escritorio (md)
+              flexDirection: { xs: "column", md: "row" },
+              gap: 2,
+              mb: 4,
+              flexWrap: "wrap"
+            }}
           >
             <TextField
               label="Número"
               value={numero}
               onChange={(e) => setNumero(e.target.value.toUpperCase())}
               variant="filled"
-              sx={{ backgroundColor: "#2a2a2a", input: { color: "white" } }}
+              // CAMBIO 3: fullWidth para que ocupe todo el ancho en móvil, width auto en escritorio
+              sx={{ backgroundColor: "#2a2a2a", input: { color: "white" }, flex: 1 }}
+              fullWidth
             />
 
             <FormControl
               variant="filled"
-              sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+              sx={{ minWidth: { xs: "100%", md: 180 }, backgroundColor: "#2a2a2a" }}
+              fullWidth // Asegura que se estire en móvil
             >
               <InputLabel sx={{ color: "#aaa" }}>Estado</InputLabel>
               <Select
@@ -154,7 +167,8 @@ export default function Lockers() {
 
             <FormControl
               variant="filled"
-              sx={{ minWidth: 180, backgroundColor: "#2a2a2a" }}
+              sx={{ minWidth: { xs: "100%", md: 180 }, backgroundColor: "#2a2a2a" }}
+              fullWidth
             >
               <InputLabel sx={{ color: "#aaa" }}>Ubicación</InputLabel>
               <Select
@@ -170,10 +184,11 @@ export default function Lockers() {
               </Select>
             </FormControl>
 
-            {/* FILTRO ESTADO movido antes del botón */}
+            {/* FILTRO ESTADO */}
             <FormControl
               variant="filled"
-              sx={{ minWidth: 200, backgroundColor: "#2a2a2a" }}
+              sx={{ minWidth: { xs: "100%", md: 200 }, backgroundColor: "#2a2a2a" }}
+              fullWidth
             >
               <InputLabel sx={{ color: "#aaa" }}>Filtrar por estado</InputLabel>
               <Select
@@ -188,75 +203,84 @@ export default function Lockers() {
               </Select>
             </FormControl>
 
-            <Button type="submit" variant="contained">
+            <Button
+              type="submit"
+              variant="contained"
+              // CAMBIO 4: Botón ancho completo en móvil, tamaño normal en escritorio
+              sx={{ height: 56, minWidth: { xs: "100%", md: "auto" } }}
+            >
               {editId ? "Actualizar" : "Agregar"}
             </Button>
           </Box>
 
 
-          {/* TABLA */}
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ color: "white" }}>Número</TableCell>
-                <TableCell sx={{ color: "white" }}>Estado</TableCell>
-                <TableCell sx={{ color: "white" }}>Ubicación</TableCell>
-                <TableCell sx={{ color: "white" }} align="center">
-                  Acciones
-                </TableCell>
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {lockersFiltrados.map((locker) => (
-                <TableRow key={locker.id}>
-                  <TableCell sx={{ color: "white" }}>
-                    {locker.numeroLocker}
-                  </TableCell>
-
-                  <TableCell>
-                    <Chip
-                      label={locker.estado}
-                      color={
-                        locker.estado === "DISPONIBLE"
-                          ? "success"
-                          : locker.estado === "OCUPADO"
-                            ? "error"
-                            : "warning"
-                      }
-                    />
-                  </TableCell>
-                  <TableCell sx={{ color: "white" }}>
-                    {locker.ubicacion}
-                  </TableCell>
-
-                  <TableCell align="center">
-                    <IconButton
-                      color="warning"
-                      onClick={() => handleEdit(locker)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-
-                    <IconButton
-                      color="error"
-                      onClick={() => handleDelete(locker.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {lockers.length === 0 && (
+          {/* TABLA RESPONSIVA */}
+          {/* CAMBIO 5: Wrapper para scroll horizontal en tablas */}
+          <TableContainer component={Paper} sx={{ backgroundColor: "transparent", boxShadow: "none" }}>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ color: "white" }} align="center">
-                    No hay lockers
+                  <TableCell sx={{ color: "white", whiteSpace: "nowrap" }}>Número</TableCell>
+                  <TableCell sx={{ color: "white" }}>Estado</TableCell>
+                  <TableCell sx={{ color: "white", whiteSpace: "nowrap" }}>Ubicación</TableCell>
+                  <TableCell sx={{ color: "white" }} align="center">
+                    Acciones
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHead>
+
+              <TableBody>
+                {lockersFiltrados.map((locker) => (
+                  <TableRow key={locker.id}>
+                    <TableCell sx={{ color: "white" }}>
+                      {locker.numeroLocker}
+                    </TableCell>
+
+                    <TableCell>
+                      <Chip
+                        label={locker.estado}
+                        size="small" // Chip un poco más pequeño en móvil se ve mejor
+                        color={
+                          locker.estado === "DISPONIBLE"
+                            ? "success"
+                            : locker.estado === "OCUPADO"
+                              ? "error"
+                              : "warning"
+                        }
+                      />
+                    </TableCell>
+                    <TableCell sx={{ color: "white" }}>
+                      {locker.ubicacion}
+                    </TableCell>
+
+                    <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                      <IconButton
+                        color="warning"
+                        onClick={() => handleEdit(locker)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+
+                      <IconButton
+                        color="error"
+                        onClick={() => handleDelete(locker.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {lockers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} sx={{ color: "white" }} align="center">
+                      No hay lockers
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </CardContent>
       </Card>
 
